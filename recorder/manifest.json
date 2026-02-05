@@ -1,0 +1,41 @@
+{
+    "manifest_version": 3,
+    "name": "UX Bench Recorder",
+    "version": "1.0.0",
+    "permissions": [
+        "activeTab",
+        "sidePanel",
+        "storage",
+        "commands",
+        "scripting"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "commands": {
+        "toggle-recording": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+R",
+                "mac": "Command+Shift+R"
+            },
+            "description": "Start or stop UX benchmark recording"
+        }
+    },
+    "background": {
+        "service_worker": "service-worker.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content-script.js"
+            ],
+            "run_at": "document_idle"
+        }
+    ],
+    "side_panel": {
+        "default_path": "sidepanel.html"
+    }
+}

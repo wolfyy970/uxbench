@@ -1,0 +1,212 @@
+{
+    "schema_version": "1.0",
+    "source": "chrome-extension",
+    "metadata": {
+        "recording_name": "Salesforce Create Customer",
+        "product": "Salesforce",
+        "task": "Create Customer",
+        "url": "https://salesforce.com/app/contacts",
+        "urls_visited": [
+            "https://salesforce.com/app/contacts",
+            "https://salesforce.com/app/contacts/new"
+        ],
+        "timestamp": "2023-10-27T10:00:00Z",
+        "duration_ms": 45000,
+        "browser": "Chrome 118",
+        "source_version": "1.0.0",
+        "operator": "human",
+        "navigation_count": 2,
+        "navigation_gap_ms": 1200
+    },
+    "metrics": {
+        "click_count": {
+            "total": 12,
+            "productive": 8,
+            "ceremonial": 4,
+            "wasted": 0,
+            "ceremonial_details": [
+                {
+                    "element": "Close Modal",
+                    "reason": "Modal was blocking the view"
+                },
+                {
+                    "element": "Dismiss Cookie Banner",
+                    "reason": "Cookie banner"
+                },
+                {
+                    "element": "Open Sidebar",
+                    "reason": "Navigation"
+                },
+                {
+                    "element": "Close Sidebar",
+                    "reason": "Navigation"
+                }
+            ],
+            "wasted_details": []
+        },
+        "time_on_task": {
+            "total_ms": 45000,
+            "active_ms": 30000,
+            "idle_ms": 10000,
+            "application_wait_ms": 5000,
+            "longest_idle_ms": 3500,
+            "longest_idle_after": "Opened New Contact Form",
+            "longest_wait_ms": 2000,
+            "longest_wait_trigger": "Clicked Save",
+            "confusion_gaps": [
+                {
+                    "gap_ms": 3500,
+                    "after_action": "Opened New Contact Form",
+                    "before_action": "Typed Name"
+                }
+            ]
+        },
+        "fitts": {
+            "formula": "shannon",
+            "cumulative_id": 45.5,
+            "average_id": 3.8,
+            "max_id": 6.2,
+            "max_id_element": "Save Button",
+            "max_id_distance_px": 850,
+            "max_id_target_size": "100x40px",
+            "top_3_hardest": [
+                {
+                    "element": "Save Button",
+                    "id": 6.2,
+                    "distance_px": 850,
+                    "target_size": "100x40px"
+                },
+                {
+                    "element": "Cancel Button",
+                    "id": 5.5,
+                    "distance_px": 600,
+                    "target_size": "100x40px"
+                },
+                {
+                    "element": "Help Icon",
+                    "id": 5.0,
+                    "distance_px": 400,
+                    "target_size": "20x20px"
+                }
+            ],
+            "throughput": {
+                "a_ms": 100,
+                "b_ms_per_bit": 85,
+                "r_squared": 0.92
+            },
+            "average_path_efficiency": 0.85,
+            "total_overshoots": 2
+        },
+        "information_density": {
+            "method": "dom-coverage",
+            "average_content_ratio": 0.45,
+            "min_content_ratio": 0.30,
+            "max_content_ratio": 0.60,
+            "min_content_context": "Loading Screen",
+            "max_content_context": "Contact List View"
+        },
+        "context_switches": {
+            "total": 5,
+            "ratio": 0.42,
+            "longest_keyboard_streak": 15,
+            "longest_mouse_streak": 4,
+            "most_switch_heavy_moment": "Filling Address Form"
+        },
+        "shortcut_coverage": {
+            "shortcuts_used": 2,
+            "mouse_with_shortcut": 3,
+            "ratio": 0.4,
+            "accesskeys_found": 5,
+            "missed_shortcuts": [
+                {
+                    "action": "Clicked Save",
+                    "shortcut": "Ctrl+S"
+                },
+                {
+                    "action": "Clicked Cancel",
+                    "shortcut": "Esc"
+                }
+            ]
+        },
+        "typing_ratio": {
+            "free_text_inputs": 4,
+            "constrained_inputs": 2,
+            "ratio": 2.0,
+            "free_text_fields": [
+                "First Name",
+                "Last Name",
+                "Email",
+                "Phone"
+            ]
+        },
+        "navigation_depth": {
+            "max_depth": 3,
+            "total_depth_changes": 6,
+            "deepest_moment": "Contact Form > Address Modal > Zip Code Lookup",
+            "depth_path": [
+                {
+                    "direction": "open",
+                    "layer": "Contact Form"
+                },
+                {
+                    "direction": "open",
+                    "layer": "Address Modal"
+                },
+                {
+                    "direction": "open",
+                    "layer": "Zip Code Lookup"
+                },
+                {
+                    "direction": "close",
+                    "layer": "Zip Code Lookup"
+                },
+                {
+                    "direction": "close",
+                    "layer": "Address Modal"
+                },
+                {
+                    "direction": "close",
+                    "layer": "Contact Form"
+                }
+            ]
+        },
+        "scanning_distance": {
+            "method": "euclidean",
+            "cumulative_px": 15000,
+            "average_px": 1250,
+            "max_single_px": 2000,
+            "max_single_from": "Top Left Menu",
+            "max_single_to": "Bottom Right Chat"
+        },
+        "scroll_distance": {
+            "total_px": 2500,
+            "page_scroll_px": 1500,
+            "container_scroll_px": 1000,
+            "scroll_events": 50,
+            "heaviest_container": "Contact List"
+        },
+        "composite_score": 85.5
+    },
+    "human_signals": {
+        "decision_time": {
+            "mean_ms": 1500,
+            "median_ms": 1200,
+            "p90_ms": 2500,
+            "confusion_gaps": 1,
+            "worst_confusion": {
+                "gap_ms": 3500,
+                "after_action": "Opened New Contact Form",
+                "likely_cause": "Complex Form Layout"
+            }
+        },
+        "hesitation": {
+            "hover_hesitations": 3,
+            "near_miss_corrections": 1,
+            "repeated_targeting": 0
+        },
+        "throughput_index": {
+            "b_coefficient_ms_per_bit": 85,
+            "comparison_to_norm": "Average"
+        }
+    }
+}

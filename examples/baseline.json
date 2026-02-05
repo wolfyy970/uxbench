@@ -1,0 +1,65 @@
+{
+    "schema_version": "1.0.0",
+    "source": "uxbench-recorder-v1.0.0",
+    "metadata": {
+        "id": "rec_baseline_001",
+        "timestamp": "2023-10-27T10:00:00Z",
+        "product": "Legacy CRM",
+        "version": "v1.0",
+        "task_name": "Create New Customer",
+        "tags": [
+            "baseline",
+            "legacy"
+        ],
+        "recorder_version": "1.0.0",
+        "url": "https://legacy-crm.example.com/customers/new"
+    },
+    "metrics": {
+        "click_count": {
+            "total": 12,
+            "breakdown": {
+                "navigation": 4,
+                "input": 6,
+                "action": 2
+            }
+        },
+        "time_on_task": {
+            "total_ms": 45000,
+            "phases": [
+                {
+                    "name": "navigation",
+                    "duration_ms": 10000
+                },
+                {
+                    "name": "form_entry",
+                    "duration_ms": 30000
+                },
+                {
+                    "name": "submission",
+                    "duration_ms": 5000
+                }
+            ]
+        },
+        "fitts": {
+            "average_id": 4.2,
+            "cumulative_id": 42.5,
+            "max_id": 5.8
+        },
+        "information_density": {
+            "average_content_ratio": 0.15
+        },
+        "context_switches": {
+            "total": 8,
+            "ratio": 0.25
+        },
+        "shortcut_coverage": {
+            "shortcuts_used": 0,
+            "ratio": 0.0
+        },
+        "navigation_depth": {
+            "max_depth": 4,
+            "total_depth_changes": 6
+        },
+        "composite_score": 65.5
+    }
+}

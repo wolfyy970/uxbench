@@ -1,0 +1,626 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://uxbench.dev/schema/benchmark/1.0",
+    "title": "UX Benchmark Report",
+    "type": "object",
+    "required": [
+        "schema_version",
+        "source",
+        "metadata",
+        "metrics"
+    ],
+    "properties": {
+        "schema_version": {
+            "type": "string",
+            "const": "1.0"
+        },
+        "source": {
+            "type": "string",
+            "enum": [
+                "chrome-extension",
+                "playwright-mode1",
+                "playwright-mode2",
+                "custom"
+            ]
+        },
+        "metadata": {
+            "type": "object",
+            "required": [
+                "recording_name",
+                "product",
+                "task",
+                "timestamp"
+            ],
+            "properties": {
+                "recording_name": {
+                    "type": "string"
+                },
+                "product": {
+                    "type": "string"
+                },
+                "task": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "urls_visited": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "timestamp": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "duration_ms": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "browser": {
+                    "type": "string"
+                },
+                "source_version": {
+                    "type": "string"
+                },
+                "operator": {
+                    "type": "string",
+                    "enum": [
+                        "human",
+                        "ai-agent",
+                        "script"
+                    ]
+                },
+                "persona": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "agent_model": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "navigation_count": {
+                    "type": "integer"
+                },
+                "navigation_gap_ms": {
+                    "type": "integer"
+                }
+            }
+        },
+        "metrics": {
+            "type": "object",
+            "required": [
+                "composite_score"
+            ],
+            "properties": {
+                "click_count": {
+                    "type": "object",
+                    "properties": {
+                        "total": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "productive": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "ceremonial": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "wasted": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "ceremonial_details": {
+                            "type": "array",
+                            "description": "What each ceremonial click was — e.g. 'dismiss cookie banner', 'close confirmation dialog'",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "element": {
+                                        "type": "string"
+                                    },
+                                    "reason": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        },
+                        "wasted_details": {
+                            "type": "array",
+                            "description": "What each wasted click was — e.g. 'clicked disabled Submit button'",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "element": {
+                                        "type": "string"
+                                    },
+                                    "reason": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "time_on_task": {
+                    "type": "object",
+                    "properties": {
+                        "total_ms": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "active_ms": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "idle_ms": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "application_wait_ms": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "longest_idle_ms": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "longest_idle_after": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "What happened before the longest idle gap — e.g. 'opened filter panel'"
+                        },
+                        "longest_wait_ms": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "longest_wait_trigger": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "What caused the longest app wait — e.g. 'clicked Search'"
+                        },
+                        "confusion_gaps": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "description": "Idle gaps > confusion threshold (default 3s), each with context",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "gap_ms": {
+                                        "type": "number"
+                                    },
+                                    "after_action": {
+                                        "type": "string"
+                                    },
+                                    "before_action": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "fitts": {
+                    "type": "object",
+                    "properties": {
+                        "formula": {
+                            "type": "string",
+                            "const": "shannon"
+                        },
+                        "cumulative_id": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "average_id": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "max_id": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "max_id_element": {
+                            "type": "string",
+                            "description": "The element that was hardest to reach — e.g. 'Save button'"
+                        },
+                        "max_id_distance_px": {
+                            "type": "number",
+                            "description": "How far the cursor traveled to reach it"
+                        },
+                        "max_id_target_size": {
+                            "type": "string",
+                            "description": "Target dimensions — e.g. '80×32px'"
+                        },
+                        "top_3_hardest": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "description": "Three hardest targeting actions with element names and IDs",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "element": {
+                                        "type": "string"
+                                    },
+                                    "id": {
+                                        "type": "number"
+                                    },
+                                    "distance_px": {
+                                        "type": "number"
+                                    },
+                                    "target_size": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        },
+                        "throughput": {
+                            "type": [
+                                "object",
+                                "null"
+                            ],
+                            "properties": {
+                                "a_ms": {
+                                    "type": "number"
+                                },
+                                "b_ms_per_bit": {
+                                    "type": "number"
+                                },
+                                "r_squared": {
+                                    "type": "number"
+                                }
+                            }
+                        },
+                        "average_path_efficiency": {
+                            "type": [
+                                "number",
+                                "null"
+                            ]
+                        },
+                        "total_overshoots": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        }
+                    }
+                },
+                "information_density": {
+                    "type": "object",
+                    "properties": {
+                        "method": {
+                            "type": "string"
+                        },
+                        "average_content_ratio": {
+                            "type": "number"
+                        },
+                        "min_content_ratio": {
+                            "type": "number"
+                        },
+                        "max_content_ratio": {
+                            "type": "number"
+                        },
+                        "min_content_context": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "Which screen state had the least content — e.g. 'settings page'"
+                        },
+                        "max_content_context": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "Which screen state had the most content — e.g. 'data table view'"
+                        }
+                    }
+                },
+                "context_switches": {
+                    "type": "object",
+                    "properties": {
+                        "total": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "ratio": {
+                            "type": "number"
+                        },
+                        "longest_keyboard_streak": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "longest_mouse_streak": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "most_switch_heavy_moment": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "Where rapid switching happened — e.g. 'filling form then clicking dropdowns'"
+                        }
+                    }
+                },
+                "shortcut_coverage": {
+                    "type": "object",
+                    "properties": {
+                        "shortcuts_used": {
+                            "type": "integer"
+                        },
+                        "mouse_with_shortcut": {
+                            "type": "integer"
+                        },
+                        "ratio": {
+                            "type": "number"
+                        },
+                        "accesskeys_found": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "missed_shortcuts": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "description": "Mouse actions where a keyboard shortcut existed but wasn't used",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "action": {
+                                        "type": "string"
+                                    },
+                                    "shortcut": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "typing_ratio": {
+                    "type": "object",
+                    "properties": {
+                        "free_text_inputs": {
+                            "type": "integer"
+                        },
+                        "constrained_inputs": {
+                            "type": "integer"
+                        },
+                        "ratio": {
+                            "type": "number"
+                        },
+                        "free_text_fields": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "description": "Which fields required typing — e.g. ['Customer name', 'Notes']",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "navigation_depth": {
+                    "type": "object",
+                    "properties": {
+                        "max_depth": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "total_depth_changes": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "deepest_moment": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "What was open at max depth — e.g. 'modal > dropdown > date picker'"
+                        },
+                        "depth_path": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "description": "Sequence of layer opens/closes with names",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "direction": {
+                                        "type": "string",
+                                        "enum": [
+                                            "open",
+                                            "close"
+                                        ]
+                                    },
+                                    "layer": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "scanning_distance": {
+                    "type": "object",
+                    "properties": {
+                        "method": {
+                            "type": "string"
+                        },
+                        "cumulative_px": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "average_px": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "max_single_px": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "max_single_from": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "Where the user was — e.g. 'data table row 3'"
+                        },
+                        "max_single_to": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "Where they jumped to — e.g. 'toolbar Save button'"
+                        }
+                    }
+                },
+                "scroll_distance": {
+                    "type": "object",
+                    "properties": {
+                        "total_px": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "page_scroll_px": {
+                            "type": [
+                                "number",
+                                "null"
+                            ]
+                        },
+                        "container_scroll_px": {
+                            "type": [
+                                "number",
+                                "null"
+                            ]
+                        },
+                        "scroll_events": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "heaviest_container": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "Which container demanded the most scrolling — e.g. 'customer list sidebar'"
+                        }
+                    }
+                },
+                "composite_score": {
+                    "type": "number"
+                }
+            }
+        },
+        "human_signals": {
+            "type": [
+                "object",
+                "null"
+            ],
+            "description": "Present only for chrome-extension recordings",
+            "properties": {
+                "decision_time": {
+                    "type": "object",
+                    "properties": {
+                        "mean_ms": {
+                            "type": "number"
+                        },
+                        "median_ms": {
+                            "type": "number"
+                        },
+                        "p90_ms": {
+                            "type": "number"
+                        },
+                        "confusion_gaps": {
+                            "type": "integer"
+                        },
+                        "worst_confusion": {
+                            "type": [
+                                "object",
+                                "null"
+                            ],
+                            "properties": {
+                                "gap_ms": {
+                                    "type": "number"
+                                },
+                                "after_action": {
+                                    "type": "string"
+                                },
+                                "likely_cause": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "hesitation": {
+                    "type": "object",
+                    "properties": {
+                        "hover_hesitations": {
+                            "type": "integer"
+                        },
+                        "near_miss_corrections": {
+                            "type": "integer"
+                        },
+                        "repeated_targeting": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "throughput_index": {
+                    "type": "object",
+                    "properties": {
+                        "b_coefficient_ms_per_bit": {
+                            "type": "number"
+                        },
+                        "comparison_to_norm": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "action_log": {
+            "type": [
+                "array",
+                "null"
+            ],
+            "description": "Optional per-action detail. Available behind --research flag."
+        }
+    }
+}

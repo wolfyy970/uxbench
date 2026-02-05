@@ -1,0 +1,65 @@
+{
+    "schema_version": "1.0.0",
+    "source": "uxbench-recorder-v1.0.0",
+    "metadata": {
+        "id": "rec_improved_001",
+        "timestamp": "2023-10-27T14:00:00Z",
+        "product": "Modern CRM",
+        "version": "v2.0",
+        "task_name": "Create New Customer",
+        "tags": [
+            "redesign",
+            "modern"
+        ],
+        "recorder_version": "1.0.0",
+        "url": "https://modern-crm.example.com/customers/new"
+    },
+    "metrics": {
+        "click_count": {
+            "total": 5,
+            "breakdown": {
+                "navigation": 1,
+                "input": 3,
+                "action": 1
+            }
+        },
+        "time_on_task": {
+            "total_ms": 18500,
+            "phases": [
+                {
+                    "name": "navigation",
+                    "duration_ms": 2000
+                },
+                {
+                    "name": "form_entry",
+                    "duration_ms": 15000
+                },
+                {
+                    "name": "submission",
+                    "duration_ms": 1500
+                }
+            ]
+        },
+        "fitts": {
+            "average_id": 2.1,
+            "cumulative_id": 15.3,
+            "max_id": 2.8
+        },
+        "information_density": {
+            "average_content_ratio": 0.45
+        },
+        "context_switches": {
+            "total": 2,
+            "ratio": 0.05
+        },
+        "shortcut_coverage": {
+            "shortcuts_used": 1,
+            "ratio": 0.2
+        },
+        "navigation_depth": {
+            "max_depth": 2,
+            "total_depth_changes": 2
+        },
+        "composite_score": 92.0
+    }
+}

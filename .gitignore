@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+recorder/node_modules/
+
+# Build outputs
+dist/
+recorder/dist/
+cli/uxbench
+uxbench
+*.o
+*.test
+
+# Go
+go.work
+go.work.sum
+.tools/
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

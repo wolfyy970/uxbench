@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>UX BENCH</title>
+  <style>
+    :root {
+      --term-green: #33ff33;
+      --term-dim: #1a661a;
+      --term-bg: #050505;
+      --term-border: #33ff33;
+    }
+
+    body {
+      background-color: var(--term-bg);
+      color: var(--term-green);
+      font-family: "Menlo", "Monaco", "Courier New", monospace;
+      font-size: 11px;
+      padding: 10px;
+      margin: 0;
+      height: 100vh;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    body::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+      background-size: 100% 2px;
+      pointer-events: none;
+      opacity: 0.3;
+    }
+
+    .hud-panel {
+      border: 1px solid var(--term-dim);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: 4px;
+    }
+
+    header {
+      background: var(--term-green);
+      color: var(--term-bg);
+      font-weight: 900;
+      padding: 4px;
+      display: flex;
+      justify-content: space-between;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .section {
+      border-left: 1px dashed var(--term-dim);
+      padding-left: 6px;
+      margin-bottom: 8px;
+    }
+
+    .label {
+      color: var(--term-dim);
+      font-size: 9px;
+      margin-bottom: 2px;
+      display: block;
+    }
+
+    .checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .check-box {
+      width: 8px;
+      height: 8px;
+      border: 1px solid var(--term-green);
+      display: inline-block;
+    }
+
+    button {
+      background: transparent;
+      color: var(--term-green);
+      border: 1px solid var(--term-green);
+      padding: 8px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      cursor: pointer;
+      width: 100%;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    button:hover {
+      background: rgba(51, 255, 51, 0.1);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button:disabled {
+      border-color: var(--term-dim);
+      color: var(--term-dim);
+      cursor: not-allowed;
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    /* Select Styling with Chevron */
+    select {
+      width: 100%;
+      background: #000;
+      color: #33ff33;
+      border: 1px dashed var(--term-dim);
+      font-family: inherit;
+      font-size: 10px;
+      padding: 4px;
+      outline: none;
+      border-radius: 0;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2333ff33' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 4px center;
+      background-size: 12px;
+    }
+
+    /* Telemetry Grid */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    .telemetry-item {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .telemetry-val {
+      color: #fff;
+    }
+
+    /* Stats */
+    #status {
+      font-size: 9px;
+      margin-top: 4px;
+      border-top: 1px solid var(--term-dim);
+      padding-top: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Recording State */
+    .rec-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--term-dim);
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+
+    body.recording .rec-indicator {
+      background: var(--term-green);
+      animation: flash 0.5s infinite;
+    }
+
+    body.recording button#actionBtn {
+      border-color: #ff3333;
+      color: #ff3333;
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: 0;
+      }
+    }
+
+    @keyframes flash {
+      50% {
+        opacity: 0.3;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="hud-panel">
+    <header>
+      <span>UX_REC_V1</span>
+      <span id="runCount" style="color: #fff">RUNS: 0</span>
+      <span id="liveTime">00:00</span>
+    </header>
+
+    <div class="section">
+      <span class="label">VIEWPORT SIZE</span>
+      <select id="resSelect">
+        <option value="" disabled selected>-- SELECT --</option>
+        <option value="1024x768">1024 x 768 (TABLET)</option>
+        <option value="1280x800">1280 x 800 (LAPTOP)</option>
+        <option value="1366x768">1366 x 768 (COMMON)</option>
+        <option value="1440x900">1440 x 900 (DESKTOP)</option>
+        <option value="1920x1080">1920 x 1080 (HD)</option>
+      </select>
+    </div>
+
+    <div class="section">
+      <span class="label">PRE-FLIGHT</span>
+      <div class="checklist">
+        <div class="check-item"><span class="check-box"></span> NAVIGATE TO URL</div>
+        <div class="check-item"><span class="check-box"></span> CENTER CURSOR ON PAGE</div>
+      </div>
+    </div>
+
+    <div class="section" style="flex: 1; display: flex; flex-direction: column;">
+      <span class="label">TELEMETRY</span>
+      <div class="telemetry-grid">
+        <div class="telemetry-item"><span>CLICKS:</span> <span id="liveClicks" class="telemetry-val">0</span></div>
+        <div class="telemetry-item"><span>DEPTH:</span> <span id="liveDepth" class="telemetry-val">1</span></div>
+      </div>
+      <div id="results"
+        style="display:none; flex: 1; overflow-y: auto; margin-top: 4px; border-top: 1px dashed var(--term-dim);"></div>
+    </div>
+
+    <button id="actionBtn" disabled>START</button>
+    <div style="display: flex; gap: 4px;">
+      <button id="downloadBtn" disabled style="flex: 2;">DOWNLOAD</button>
+      <button id="clearBtn" disabled style="flex: 1; border-style: dashed;">CLEAR</button>
+    </div>
+
+    <div id="status">
+      <span><span class="rec-indicator"></span>SYS_RDY</span>
+      <span>CMD+SHFT+R</span>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+
+</html>

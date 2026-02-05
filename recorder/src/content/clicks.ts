@@ -1,6 +1,9 @@
 export class ClickCollector {
     private handler = (e: MouseEvent) => this.handleClick(e);
 
+    // Callback for cross-collector coordination (context switches, density sampling)
+    onClickCaptured: (() => void) | null = null;
+
     attach() {
         document.addEventListener('click', this.handler, { capture: true, passive: true });
     }
@@ -17,7 +20,7 @@ export class ClickCollector {
             target: {
                 tagName: target.tagName,
                 id: target.id,
-                className: target.className,
+                className: typeof target.className === 'string' ? target.className : '',
                 innerText: target.innerText?.substring(0, 50) || '',
                 rect: target.getBoundingClientRect()
             },
@@ -28,6 +31,9 @@ export class ClickCollector {
         chrome.runtime.sendMessage({
             type: 'EVENT_CAPTURED',
             payload: eventData
-        });
+        }).catch(() => {});
+
+        // Notify other collectors
+        if (this.onClickCaptured) this.onClickCaptured();
     }
 }

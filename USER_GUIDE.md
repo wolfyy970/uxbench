@@ -49,7 +49,7 @@ The Recorder now resides in the Chrome Side Panel for real-time telemetry.
     -   Verify the status changes to `RECORDING` and the border turns green/red.
 4.  **Perform the Task:**
     -   Complete your workflow.
-    -   Observe **Live Telemetry** (Clicks, Depth) updating in real-time.
+    -   Observe **Live Telemetry** (Clicks, Depth, Scroll, Switches) updating in real-time.
 5.  **Stop Recording:**
     -   Click **STOP** or press the hotkey.
     -   The run is added to the session buffer (`RUNS: 1`).
@@ -111,7 +111,7 @@ uxbench compare --format markdown design_a.json design_b.json > results.md
 ## Troubleshooting
 
 **"Extension Error: Service worker inactive"**
-Manifest V3 service workers go to sleep. If the extension seems unresponsive, just click the icon to wake it up before starting a recording.
+Manifest V3 service workers go to sleep. Open the Side Panel before recording -- it keeps the worker alive via telemetry polling. If the extension seems unresponsive, click the icon to wake it up.
 
 **"CLI: command not found"**
 Ensure `$HOME/go/bin` is in your shell `PATH`, or run the binary locally using `./cli/uxbench`.

@@ -13,10 +13,23 @@ uxbench/
 ├── recorder/                      # Chrome Extension (TypeScript)
 │   ├── manifest.json
 │   ├── src/
-│   │   ├── background/            # Service worker (Session state)
-│   │   ├── content/               # Content script (Event capture)
-│   │   └── sidepanel/             # Side panel UI
-│   └── build.sh
+│   │   ├── background/
+│   │   │   ├── worker.ts          # Service worker (state machine, event routing)
+│   │   │   └── worker.test.ts
+│   │   ├── content/
+│   │   │   ├── collector.ts       # Orchestrator — wires all 5 collectors
+│   │   │   ├── clicks.ts          # Click capture, target geometry
+│   │   │   ├── scroll.ts          # Page + container scroll distance
+│   │   │   ├── keyboard.ts        # Context switches, shortcuts, typing ratio
+│   │   │   ├── depth.ts           # Navigation depth via MutationObserver
+│   │   │   ├── density.ts         # Information density via DOM coverage
+│   │   │   └── *.test.ts          # One test file per collector
+│   │   ├── sidepanel/
+│   │   │   ├── index.html         # Terminal-style HUD
+│   │   │   └── app.ts             # UI state, telemetry polling, download averaging
+│   │   └── __mocks__/setup.ts     # Chrome API stubs for vitest
+│   ├── vitest.config.ts
+│   └── package.json
 │
 ├── cli/                           # Go CLI + TUI (Charm Bubble Tea)
 │   ├── cmd/                       # Cobra commands
@@ -68,24 +81,46 @@ go generate ./schema/...
 
 ### 3.1 Manifest V3
 
-Key permissions: `activeTab`, `sidePanel`, `storage`, `commands`.
+Key permissions: `activeTab`, `sidePanel`, `storage`, `commands`, `scripting`.
 No remote code. Fully offline.
 
-### 3.2 Content Script (Event Capture)
+### 3.2 Content Script — Collector Architecture
 
-Listens on `document` (capture phase, passive).
--   **Sampling**: `mousemove` and scroll sampled at 60Hz via `requestAnimationFrame` into a ring buffer.
--   **MutationObserver**: Tracks DOM changes for Density and Navigation Depth.
--   **Passive Observation**: Never blocks the main thread or calls `preventDefault`.
+The content script uses a **Collector orchestrator** (`collector.ts`) that wires five independent collectors. Each collector owns one concern and communicates to the worker via `chrome.runtime.sendMessage`.
+
+```
+Collector (orchestrator)
+├── ClickCollector     → click events          → EVENT_CAPTURED {type: "click"}
+├── ScrollCollector    → page + container scroll → EVENT_CAPTURED {type: "scroll_update"}
+├── KeyboardCollector  → keys, focus, shortcuts  → EVENT_CAPTURED {type: "keyboard_update"}
+├── DepthCollector     → MutationObserver layers → EVENT_CAPTURED {type: "depth_update"}
+└── DensityCollector   → DOM coverage sampling   → EVENT_CAPTURED {type: "density_update"}
+```
+
+**Cross-collector coordination:** The orchestrator connects collectors via callbacks. When a click is captured, `KeyboardCollector.notifyMouseAction()` fires (for context switch tracking) and `DensityCollector.sampleOnInteraction()` fires (to sample density at interaction time).
+
+All listeners use `capture: true, passive: true`. No collector calls `preventDefault`.
 
 ### 3.3 Background Service Worker (State)
 
-Maintains session state across page navigations.
--   Receives `beforeunload` summary from content script.
--   Re-injects and bridges state to new content script on `ready`.
--   **Keep-alive**: Heartbeat every 25s to prevent termination.
+The worker (`worker.ts`) is the single state authority. It owns the recording lifecycle and the benchmark report object.
 
-### 3.4 Data Privacy
+**Key patterns:**
+-   **Schema-compliant initialization**: `startRecording()` builds a complete benchmark report skeleton matching `benchmark.schema.json` before recording begins.
+-   **Write-before-notify**: `stopRecording()` writes `benchmarkReport` to `chrome.storage.local` *before* sending `RECORDING_STOPPED`. The side panel reads the report after receiving the message, so it is guaranteed to exist.
+-   **Re-entrancy guard**: An `isTransitioning` flag prevents overlapping start/stop calls from the side panel or keyboard shortcut.
+-   **Event routing**: `handleEvent()` routes five payload types (`click`, `scroll_update`, `keyboard_update`, `depth_update`, `density_update`) to the appropriate metric fields. Click events also compute Fitts ID and scanning distance inline.
+-   **Live telemetry**: After each event, the worker writes a `stats` object to storage (clicks, depth, scroll, switches) that the side panel polls at 1Hz.
+-   **`chrome.action` guarding**: All `chrome.action` calls are wrapped in `if (chrome.action)` to prevent errors when the action API is unavailable.
+
+### 3.4 Side Panel
+
+The side panel (`app.ts` + `index.html`) is a terminal-style HUD. Key behaviors:
+-   **Single update path**: `updateUI()` is called only from the worker's broadcast messages (`RECORDING_STARTED`, `RECORDING_STOPPED`). No double-fires.
+-   **Live telemetry**: Polls `chrome.storage.local` every 1s for `stats` (clicks, depth, scroll, switches) and `recordingState.startTime` (live timer).
+-   **Multi-run averaging**: Download handler averages all 10 metric groups across recorded runs. Output filename includes run count (e.g., `_AVG_3runs.json`).
+
+### 3.5 Data Privacy
 
 -   **Input values**: Never logged (except key identity for modifiers).
 -   **Sensitive fields**: Password inputs logged as generic "sensitive interaction".
@@ -93,7 +128,20 @@ Maintains session state across page navigations.
 
 ---
 
-## 4. Go Dependencies (CLI)
+## 4. Test Infrastructure
+
+The recorder uses **vitest** with `happy-dom` for DOM simulation. Chrome APIs are stubbed in `src/__mocks__/setup.ts`.
+
+```bash
+cd recorder && npm test          # vitest run
+cd recorder && npm run test:watch # vitest (watch mode)
+```
+
+**Coverage**: 6 test files covering the worker and all 5 collectors (`clicks`, `scroll`, `keyboard`, `depth`, `density`).
+
+---
+
+## 5. Go Dependencies (CLI)
 
 | Package | Purpose |
 |---|---|
@@ -106,12 +154,12 @@ Maintains session state across page navigations.
 
 ---
 
-## 5. Technical Constraints
+## 6. Technical Constraints
 
 | Constraint | Mitigation |
 |---|---|
 | **Cross-origin iframes** | Log "click-into-iframe"; noted as gap in report. |
-| **Service worker termination** | Keep-alive heartbeat every 25s. |
-| **`mousemove` performance** | rAF sampling (60Hz), passive listeners. Target <1ms. |
+| **Service worker termination** | Side panel keeps worker alive while open. |
+| **Scroll performance** | rAF batching per-frame, passive listeners. |
 | **Navigation gap** | 50-200ms blind spot during page load; logged as `navigation_gap_ms`. |
 | **Color support** | Lip Gloss auto-detects terminal capabilities. |

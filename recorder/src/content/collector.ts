@@ -1,15 +1,33 @@
 /// <reference types="chrome"/>
 
-// Content script that orchestrates collection
 import { ClickCollector } from './clicks';
-// Import other collectors...
+import { ScrollCollector } from './scroll';
+import { KeyboardCollector } from './keyboard';
+import { DepthCollector } from './depth';
+import { DensityCollector } from './density';
 
 class Collector {
     private isRecording = false;
     private clickCollector: ClickCollector;
+    private scrollCollector: ScrollCollector;
+    private keyboardCollector: KeyboardCollector;
+    private depthCollector: DepthCollector;
+    private densityCollector: DensityCollector;
 
     constructor() {
         this.clickCollector = new ClickCollector();
+        this.scrollCollector = new ScrollCollector();
+        this.keyboardCollector = new KeyboardCollector();
+        this.depthCollector = new DepthCollector();
+        this.densityCollector = new DensityCollector();
+
+        // When a click is captured, also notify keyboard collector (for context switch tracking)
+        // and density collector (to sample at interaction time)
+        this.clickCollector.onClickCaptured = () => {
+            this.keyboardCollector.notifyMouseAction();
+            this.densityCollector.sampleOnInteraction();
+        };
+
         this.initListeners();
     }
 
@@ -22,7 +40,7 @@ class Collector {
             }
         });
 
-        // Check initial state
+        // Check initial state (handles page load during active recording)
         chrome.storage.local.get('recordingState').then(({ recordingState }) => {
             if (recordingState?.isRecording) {
                 this.start();
@@ -35,11 +53,13 @@ class Collector {
         this.isRecording = true;
         console.log('UX Bench: Recording started');
 
-        // Add visual indicator
         this.addOverlay();
 
-        // Start collectors
         this.clickCollector.attach();
+        this.scrollCollector.attach();
+        this.keyboardCollector.attach();
+        this.depthCollector.attach();
+        this.densityCollector.attach();
     }
 
     private stop() {
@@ -47,11 +67,13 @@ class Collector {
         this.isRecording = false;
         console.log('UX Bench: Recording stopped');
 
-        // Remove visual indicator
         this.removeOverlay();
 
-        // Stop collectors
         this.clickCollector.detach();
+        this.scrollCollector.detach();
+        this.keyboardCollector.detach();
+        this.depthCollector.detach();
+        this.densityCollector.detach();
     }
 
     private addOverlay() {

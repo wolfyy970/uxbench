@@ -1,7 +1,7 @@
 # UX Bench — Product Specification
 
-**Version:** 0.3 — Refactored  
-**Date:** February 4, 2026  
+**Version:** 0.4 — Full Metric Coverage
+**Date:** February 5, 2026
 **Status:** In Progress
 
 ---
@@ -119,13 +119,17 @@ Launched by default when running `compare` or `inspect` interactively.
 
 ## 6. Build Plan (See ARCHITECTURE.md for Technical Details)
 
-### Roadmap
--   **Phase 1**: Foundation (Schema, Recorder skeleton, CLI skeleton).
--   **Phase 2**: Cursor + Fitts + Summary TUI.
--   **Phase 3**: Timing + Depth + Insights.
--   **Phase 4**: Remaining Metrics + Radar.
--   **Phase 5**: Human Signals + CI + Polish.
--   **Phase 6**: Release.
+### Completed
+-   Schema, Recorder, CLI foundations.
+-   All 10 metrics captured in Recorder (5 content-script collectors).
+-   Multi-run averaging across all metric groups.
+-   Vitest test suite (worker + all 5 collectors).
+-   Summary TUI, Fitts drill-down, Radar view.
+
+### Remaining
+-   Human Signals (hesitation, decision time).
+-   CI Gate command.
+-   Release polish.
 
 ---
 

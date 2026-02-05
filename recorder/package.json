@@ -4,13 +4,16 @@
     "description": "UX Bench Recorder Extension",
     "scripts": {
         "build": "node build.js",
-        "watch": "node build.js --watch"
+        "watch": "node build.js --watch",
+        "test": "vitest run",
+        "test:watch": "vitest"
     },
-    "dependencies": {},
     "devDependencies": {
         "@types/chrome": "^0.0.260",
         "@types/node": "^20.0.0",
         "esbuild": "^0.19.0",
-        "typescript": "^5.0.0"
+        "happy-dom": "^20.5.0",
+        "typescript": "^5.0.0",
+        "vitest": "^4.0.18"
     }
 }

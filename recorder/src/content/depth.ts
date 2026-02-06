@@ -9,13 +9,22 @@ const LAYER_SELECTORS = [
     '[role="menu"]',
     '[role="listbox"]',
     '[aria-modal="true"]',
+    '[popover]:popover-open',
+    'details[open]',
     '.modal', '.modal-dialog', '.modal-content',
     '.popover', '.popup', '.dropdown-menu',
     '.overlay', '.lightbox',
     '[data-modal]', '[data-popup]', '[data-popover]',
+    '[class*="toast"]', '[class*="snackbar"]',
+    '[role="status"][class*="toast"]',
 ];
 
 const LAYER_QUERY = LAYER_SELECTORS.join(', ');
+
+import { NOOP } from './shared';
+
+/** Maximum number of depth-path entries to keep (ring buffer) */
+const DEPTH_PATH_MAX = 50;
 
 export class DepthCollector {
     private observer: MutationObserver | null = null;
@@ -161,9 +170,9 @@ export class DepthCollector {
                     current_depth: this.currentDepth,
                     total_depth_changes: this.totalDepthChanges,
                     deepest_moment: deepestMoment,
-                    depth_path: this.depthPath.slice(-20) // Last 20 changes
+                    depth_path: this.depthPath.slice(-DEPTH_PATH_MAX)
                 }
             }
-        }).catch(() => {});
+        }).catch(NOOP);
     }
 }

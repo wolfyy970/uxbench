@@ -53,7 +53,7 @@
             "longest_idle_after": "Opened New Contact Form",
             "longest_wait_ms": 2000,
             "longest_wait_trigger": "Clicked Save",
-            "confusion_gaps": [
+            "idle_gaps": [
                 {
                     "gap_ms": 3500,
                     "after_action": "Opened New Contact Form",
@@ -113,20 +113,7 @@
             "most_switch_heavy_moment": "Filling Address Form"
         },
         "shortcut_coverage": {
-            "shortcuts_used": 2,
-            "mouse_with_shortcut": 3,
-            "ratio": 0.4,
-            "accesskeys_found": 5,
-            "missed_shortcuts": [
-                {
-                    "action": "Clicked Save",
-                    "shortcut": "Ctrl+S"
-                },
-                {
-                    "action": "Clicked Cancel",
-                    "shortcut": "Esc"
-                }
-            ]
+            "shortcuts_used": 2
         },
         "typing_ratio": {
             "free_text_inputs": 4,
@@ -192,8 +179,8 @@
             "mean_ms": 1500,
             "median_ms": 1200,
             "p90_ms": 2500,
-            "confusion_gaps": 1,
-            "worst_confusion": {
+            "idle_gaps": 1,
+            "worst_idle": {
                 "gap_ms": 3500,
                 "after_action": "Opened New Contact Form",
                 "likely_cause": "Complex Form Layout"

@@ -41,9 +41,9 @@ func (m ResultsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "s":
 			if !m.Saved {
-				// Generate and Save
+				// Generate and Save Markdown
 				content := format.GenerateMarkdownTable(m.reports)
-				filename := "comparison_report.md" // Or use timestamp in name
+				filename := "comparison_report.md"
 				err := os.WriteFile(filename, []byte(content), 0644)
 				if err != nil {
 					m.SaveMsg = fmt.Sprintf("Error saving: %v", err)
@@ -51,6 +51,17 @@ func (m ResultsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.Saved = true
 					m.SaveMsg = fmt.Sprintf("Saved to %s!", filename)
 				}
+			}
+			return m, nil
+		case "c":
+			// Export as CSV
+			content := format.GenerateCSV(m.reports)
+			filename := "comparison_report.csv"
+			err := os.WriteFile(filename, []byte(content), 0644)
+			if err != nil {
+				m.SaveMsg = fmt.Sprintf("Error saving CSV: %v", err)
+			} else {
+				m.SaveMsg = fmt.Sprintf("Saved to %s!", filename)
 			}
 			return m, nil
 		}
@@ -93,20 +104,23 @@ func (m ResultsModel) View() string {
 	// Spacer
 	grid = append(grid, nil) // nil row = spacer
 	
-	// Metrics Helper
-	addMetricRow := func(label string, valFn func(schema.BenchmarkMetrics) float64, higherIsBetter bool) {
-		row := []cell{{content: label, style: lipgloss.NewStyle()}}
-		
+	// Metric rows from shared registry (core metrics only)
+	for _, def := range format.MetricRegistry {
+		if def.DetailOnly {
+			continue
+		}
+		row := []cell{{content: def.Label, style: lipgloss.NewStyle()}}
+
 		// Find best
 		bestVal := -1.0
 		first := true
 		for _, r := range m.reports {
-			val := valFn(r.Metrics)
+			val := def.Extractor(r.Metrics)
 			if first {
 				bestVal = val
 				first = false
 			} else {
-				if higherIsBetter {
+				if def.HigherIsBetter {
 					if val > bestVal { bestVal = val }
 				} else {
 					if val < bestVal { bestVal = val }
@@ -115,10 +129,10 @@ func (m ResultsModel) View() string {
 		}
 
 		for _, r := range m.reports {
-			val := valFn(r.Metrics)
+			val := def.Extractor(r.Metrics)
 			valStr := fmt.Sprintf("%.2f", val)
 			style := lipgloss.NewStyle()
-			
+
 			if val == bestVal {
 				valStr += "*"
 				style = winnerStyle
@@ -127,18 +141,6 @@ func (m ResultsModel) View() string {
 		}
 		grid = append(grid, row)
 	}
-	
-	addMetricRow("Composite Score", func(m schema.BenchmarkMetrics) float64 { return m.CompositeScore }, true)
-	addMetricRow("Total Clicks", func(m schema.BenchmarkMetrics) float64 { return float64(m.ClickCount.Total) }, false)
-	addMetricRow("Time on Task (ms)", func(m schema.BenchmarkMetrics) float64 { return float64(m.TimeOnTask.TotalMS) }, false)
-	
-	// Extended Metrics
-	addMetricRow("Fitts Avg ID", func(m schema.BenchmarkMetrics) float64 { return m.Fitts.AverageID }, false)
-	addMetricRow("Info Density", func(m schema.BenchmarkMetrics) float64 { return m.InformationDensity.AverageContentRatio }, true)
-	addMetricRow("Ctx Switches", func(m schema.BenchmarkMetrics) float64 { return float64(m.ContextSwitches.Total) }, false)
-	addMetricRow("Shortcut Ratio", func(m schema.BenchmarkMetrics) float64 { return m.ShortcutCoverage.Ratio }, true)
-	addMetricRow("Nav Depth", func(m schema.BenchmarkMetrics) float64 { return float64(m.NavigationDepth.MaxDepth) }, false)
-
 
 	// 2. Calculate Column Widths
 	// We need to know max visual width for each column index

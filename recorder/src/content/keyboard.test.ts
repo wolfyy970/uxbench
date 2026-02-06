@@ -1,6 +1,6 @@
 // Tests for the KeyboardCollector content script module
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { chrome, resetChromeMock } from '../__mocks__/chrome';
 import { KeyboardCollector } from './keyboard';
 
@@ -10,16 +10,23 @@ function keydown(key: string, opts: Partial<KeyboardEventInit> = {}) {
     }));
 }
 
+// Flush the 250ms debounce timer used by KeyboardCollector
+function flushDebounce() {
+    vi.advanceTimersByTime(300);
+}
+
 describe('KeyboardCollector', () => {
     let collector: KeyboardCollector;
 
     beforeEach(() => {
+        vi.useFakeTimers();
         resetChromeMock();
         collector = new KeyboardCollector();
     });
 
     afterEach(() => {
         collector.detach();
+        vi.useRealTimers();
     });
 
     it('should attach and detach keydown/focusin listeners', () => {
@@ -44,6 +51,7 @@ describe('KeyboardCollector', () => {
         keydown('Control');
         keydown('Alt');
         keydown('Meta');
+        flushDebounce();
 
         // No sendMessage calls because only modifier keys
         expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
@@ -55,11 +63,13 @@ describe('KeyboardCollector', () => {
         keydown('a');
         keydown('b');
         keydown('c');
+        flushDebounce();
 
-        expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(3);
+        // Debounced: one batched sendMessage call
+        expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(1);
 
-        const lastPayload = chrome.runtime.sendMessage.mock.calls[2][0].payload;
-        expect(lastPayload.type).toBe('keyboard_update');
+        const payload = chrome.runtime.sendMessage.mock.calls[0][0].payload;
+        expect(payload.type).toBe('keyboard_update');
     });
 
     it('should track context switches from mouse to keyboard', () => {
@@ -69,6 +79,7 @@ describe('KeyboardCollector', () => {
         collector.notifyMouseAction();
         // Then keyboard
         keydown('a');
+        flushDebounce();
 
         const payload = chrome.runtime.sendMessage.mock.calls[0][0].payload;
         expect(payload.context_switches.total).toBe(1);
@@ -79,10 +90,12 @@ describe('KeyboardCollector', () => {
 
         // Keyboard first
         keydown('a');
+        flushDebounce();
         // Then mouse action
         collector.notifyMouseAction();
         // Then keyboard again — this should trigger another switch
         keydown('b');
+        flushDebounce();
 
         // Last call has the context switches update
         const lastCall = chrome.runtime.sendMessage.mock.calls[chrome.runtime.sendMessage.mock.calls.length - 1][0];
@@ -95,25 +108,41 @@ describe('KeyboardCollector', () => {
         keydown('a');
         keydown('b');
         keydown('c');
+        flushDebounce();
 
-        const lastPayload = chrome.runtime.sendMessage.mock.calls[2][0].payload;
-        expect(lastPayload.context_switches.total).toBe(0);
+        const payload = chrome.runtime.sendMessage.mock.calls[0][0].payload;
+        expect(payload.context_switches.total).toBe(0);
     });
 
-    it('should detect known shortcuts (Ctrl+C, Cmd+S, etc.)', () => {
+    it('should count any modifier combo as a shortcut (Ctrl, Cmd, Alt)', () => {
         collector.attach();
 
         keydown('c', { ctrlKey: true });
         keydown('s', { metaKey: true });
+        keydown('q', { altKey: true });
+        flushDebounce();
 
-        const lastPayload = chrome.runtime.sendMessage.mock.calls[1][0].payload;
-        expect(lastPayload.shortcut_coverage.shortcuts_used).toBe(2);
+        const payload = chrome.runtime.sendMessage.mock.calls[0][0].payload;
+        expect(payload.shortcut_coverage.shortcuts_used).toBe(3);
     });
 
-    it('should not count unknown key combos as shortcuts', () => {
+    it('should not count keys without modifiers as shortcuts', () => {
         collector.attach();
 
-        keydown('q', { ctrlKey: true }); // Ctrl+Q is not in KNOWN_SHORTCUTS
+        keydown('Escape');
+        keydown('a');
+        keydown('Enter');
+        flushDebounce();
+
+        const payload = chrome.runtime.sendMessage.mock.calls[0][0].payload;
+        expect(payload.shortcut_coverage.shortcuts_used).toBe(0);
+    });
+
+    it('should not count Shift-only combos as shortcuts', () => {
+        collector.attach();
+
+        keydown('A', { shiftKey: true }); // Shift+A = typing capital A, not a shortcut
+        flushDebounce();
 
         const payload = chrome.runtime.sendMessage.mock.calls[0][0].payload;
         expect(payload.shortcut_coverage.shortcuts_used).toBe(0);
@@ -128,6 +157,7 @@ describe('KeyboardCollector', () => {
         keydown('c');
         keydown('d');
         keydown('e');
+        flushDebounce();
 
         // Switch to mouse (3 clicks)
         collector.notifyMouseAction();
@@ -136,6 +166,7 @@ describe('KeyboardCollector', () => {
 
         // Back to keyboard
         keydown('f');
+        flushDebounce();
 
         const lastPayload = chrome.runtime.sendMessage.mock.calls[chrome.runtime.sendMessage.mock.calls.length - 1][0].payload;
         expect(lastPayload.context_switches.longest_keyboard_streak).toBe(5);
@@ -173,6 +204,7 @@ describe('KeyboardCollector', () => {
 
         // Now trigger a keydown to get the update
         keydown('x');
+        flushDebounce();
 
         const payload = chrome.runtime.sendMessage.mock.calls[0][0].payload;
         expect(payload.typing_ratio.free_text_inputs).toBe(2); // text + textarea
@@ -197,11 +229,53 @@ describe('KeyboardCollector', () => {
         input.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
 
         keydown('a');
+        flushDebounce();
 
         const payload = chrome.runtime.sendMessage.mock.calls[0][0].payload;
         expect(payload.typing_ratio.free_text_inputs).toBe(1);
 
         document.body.removeChild(input);
+    });
+
+    it('should debounce rapid keystrokes into a single message', () => {
+        collector.attach();
+
+        // Type 5 keys rapidly without flushing
+        keydown('h');
+        keydown('e');
+        keydown('l');
+        keydown('l');
+        keydown('o');
+
+        // Before debounce fires, no messages should have been sent
+        expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
+
+        // Flush debounce
+        flushDebounce();
+
+        // Only ONE batched message
+        expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('should flush pending update and finalize streaks on detach', () => {
+        collector.attach();
+
+        // Build a keyboard streak of 4
+        keydown('a');
+        keydown('b');
+        keydown('c');
+        keydown('d');
+        // Do NOT flush — leave the debounce pending
+
+        expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
+
+        // Detach should flush the pending update
+        collector.detach();
+
+        // The flush on detach should have sent the update
+        expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(1);
+        const payload = chrome.runtime.sendMessage.mock.calls[0][0].payload;
+        expect(payload.context_switches.longest_keyboard_streak).toBe(4);
     });
 
     it('should compute context switch ratio', () => {
@@ -211,6 +285,7 @@ describe('KeyboardCollector', () => {
         keydown('a');
         keydown('b');
         keydown('c');
+        flushDebounce();
 
         // 2 mouse actions
         collector.notifyMouseAction();
@@ -218,6 +293,7 @@ describe('KeyboardCollector', () => {
 
         // Back to keyboard
         keydown('d');
+        flushDebounce();
 
         // Total actions = 4 key + 2 mouse = 6, context switches = 2 (key→mouse, mouse→key)
         const lastPayload = chrome.runtime.sendMessage.mock.calls[chrome.runtime.sendMessage.mock.calls.length - 1][0].payload;

@@ -14,8 +14,11 @@
 
 ```
 README.md (Hub)
-├── Product Layer: PRODUCT.md
-├── Technical Layer: ARCHITECTURE.md, [SERVICE].md (one per integration)
+├── PRODUCT.md        — Feature spec, what exists
+├── USER_GUIDE.md     — How to install, record, analyze
+├── ARCHITECTURE.md   — System design, data flow, technical constraints
+├── RESEARCHER.md     — Scientific basis, metric methodology
+└── DOCUMENTATION.md  — This file (meta-documentation)
 ```
 
 ---
@@ -24,12 +27,12 @@ README.md (Hub)
 
 | Document | Purpose | Update Trigger |
 |----------|---------|----------------|
-| **README.md** | Entry point, features, quick start, doc map | Major features |
-| **ARCHITECTURE.md** | System design, module boundaries, data flow | Architecture changes |
-| **DESIGN-SYSTEM.md** | Colors, typography, components (HOW) | Design changes |
+| **README.md** | Entry point, quick start, doc map | Major features |
 | **PRODUCT.md** | Feature source of truth (prevents hallucination) | Feature launches |
-| ** SERVICES.md** and per [SERVICE].md| Third-party setup listed and then doc per service hence [] |
-| **AGENTS.md** | AI behavioral rules ONLY (<50 lines) | Never grows |
+| **USER_GUIDE.md** | Installation, recording workflow, CLI usage | UX changes |
+| **ARCHITECTURE.md** | System design, module boundaries, data flow | Architecture changes |
+| **RESEARCHER.md** | Scientific methodology, metric definitions | Metric changes |
+| **DOCUMENTATION.md** | Meta: documentation philosophy and rules | Rarely |
 
 ---
 

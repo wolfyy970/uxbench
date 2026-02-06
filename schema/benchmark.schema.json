@@ -199,12 +199,12 @@
                             ],
                             "description": "What caused the longest app wait — e.g. 'clicked Search'"
                         },
-                        "confusion_gaps": {
+                        "idle_gaps": {
                             "type": [
                                 "array",
                                 "null"
                             ],
-                            "description": "Idle gaps > confusion threshold (default 3s), each with context",
+                            "description": "Idle gaps > threshold (default 3s), each with context",
                             "items": {
                                 "type": "object",
                                 "properties": {
@@ -372,39 +372,11 @@
                 },
                 "shortcut_coverage": {
                     "type": "object",
+                    "description": "Keyboard shortcut usage — any modifier combo (Ctrl/Cmd/Alt + key) counts as a shortcut",
                     "properties": {
                         "shortcuts_used": {
-                            "type": "integer"
-                        },
-                        "mouse_with_shortcut": {
-                            "type": "integer"
-                        },
-                        "ratio": {
-                            "type": "number"
-                        },
-                        "accesskeys_found": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
-                        },
-                        "missed_shortcuts": {
-                            "type": [
-                                "array",
-                                "null"
-                            ],
-                            "description": "Mouse actions where a keyboard shortcut existed but wasn't used",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "action": {
-                                        "type": "string"
-                                    },
-                                    "shortcut": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
+                            "type": "integer",
+                            "description": "Number of modifier-key combos used during the session"
                         }
                     }
                 },
@@ -566,10 +538,10 @@
                         "p90_ms": {
                             "type": "number"
                         },
-                        "confusion_gaps": {
+                        "idle_gaps": {
                             "type": "integer"
                         },
-                        "worst_confusion": {
+                        "worst_idle": {
                             "type": [
                                 "object",
                                 "null"

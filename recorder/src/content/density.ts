@@ -1,6 +1,21 @@
 // Information density collector — measures content-to-viewport area ratio.
 // Uses DOM coverage approach: sums bounding rects of visible content elements
-// relative to viewport area. Sampled on user interactions (not continuously).
+// relative to viewport area. Weighted by semantic importance.
+// Sampled on user interactions and scroll events.
+
+// Semantic weight by element type — text content > media > decorative
+const SEMANTIC_WEIGHTS: Record<string, number> = {
+    'P': 1.0, 'H1': 1.0, 'H2': 1.0, 'H3': 1.0, 'H4': 1.0, 'H5': 1.0, 'H6': 1.0,
+    'LI': 1.0, 'TD': 1.0, 'TH': 1.0, 'LABEL': 1.0, 'BLOCKQUOTE': 1.0, 'PRE': 1.0,
+    'INPUT': 0.8, 'SELECT': 0.8, 'TEXTAREA': 0.8, 'BUTTON': 0.7,
+    'TABLE': 0.7, 'IMG': 0.5, 'SVG': 0.3,
+    'A': 0.5, 'SPAN': 0.3,
+};
+
+import { NOOP } from './shared';
+
+/** Minimum interval between scroll-triggered density samples */
+const DENSITY_SAMPLE_THROTTLE_MS = 2000;
 
 export class DensityCollector {
     private samples: number[] = [];
@@ -8,6 +23,7 @@ export class DensityCollector {
     private maxRatio = 0;
     private minContext: string | null = null;
     private maxContext: string | null = null;
+    private lastSampleTime = 0;
 
     attach() {
         // Take an initial measurement
@@ -24,7 +40,16 @@ export class DensityCollector {
         this.sample();
     }
 
+    // Called by collector.ts on scroll events (throttled to max 1 per 2s)
+    sampleOnScroll() {
+        const now = Date.now();
+        if (now - this.lastSampleTime >= DENSITY_SAMPLE_THROTTLE_MS) {
+            this.sample();
+        }
+    }
+
     private sample() {
+        this.lastSampleTime = Date.now();
         const viewportW = window.innerWidth;
         const viewportH = window.innerHeight;
         const viewportArea = viewportW * viewportH;
@@ -40,12 +65,15 @@ export class DensityCollector {
 
         for (const el of elements) {
             // Skip elements inside other counted elements (avoid double-counting)
+            // Walk up DOM tree — O(depth) per element instead of O(counted)
             let dominated = false;
-            for (const parent of counted) {
-                if (parent.contains(el) && parent !== el) {
+            let ancestor = el.parentElement;
+            while (ancestor) {
+                if (counted.has(ancestor)) {
                     dominated = true;
                     break;
                 }
+                ancestor = ancestor.parentElement;
             }
             if (dominated) continue;
 
@@ -61,7 +89,8 @@ export class DensityCollector {
             const clippedH = Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0);
 
             if (clippedW > 0 && clippedH > 0) {
-                contentArea += clippedW * clippedH;
+                const weight = SEMANTIC_WEIGHTS[el.tagName] || 0.3;
+                contentArea += clippedW * clippedH * weight;
                 counted.add(el);
             }
         }
@@ -103,6 +132,6 @@ export class DensityCollector {
                     max_content_context: this.maxContext
                 }
             }
-        }).catch(() => {});
+        }).catch(NOOP);
     }
 }

@@ -49,7 +49,20 @@ The Recorder now resides in the Chrome Side Panel for real-time telemetry.
     -   Verify the status changes to `RECORDING` and the border turns green/red.
 4.  **Perform the Task:**
     -   Complete your workflow.
-    -   Observe **Live Telemetry** (Clicks, Depth, Scroll, Switches) updating in real-time.
+    -   Observe **Live Telemetry** updating in real-time. The side panel shows all 10 metrics + composite:
+        -   **CLICKS** — total click count
+        -   **DEPTH** — UI layer depth
+        -   **SCROLL** — scroll distance in px
+        -   **FITTS** — Fitts Index of Difficulty
+        -   **SWITCHES** — mouse/keyboard transitions
+        -   **DENSITY** — information density
+        -   **SHORTCUTS** — modifier-key combos used (Ctrl/Cmd/Alt + key)
+        -   **TYPING** — free-text typing ratio
+        -   **SCAN** — avg scanning distance
+        -   **WAIT** — application wait time
+        -   **COST** — composite interaction cost score
+    -   Hover any metric label for a tooltip explaining what it measures.
+    -   An **Activity Feed** timeline shows every captured event chronologically.
 5.  **Stop Recording:**
     -   Click **STOP** or press the hotkey.
     -   The run is added to the session buffer (`RUNS: 1`).
@@ -57,7 +70,7 @@ The Recorder now resides in the Chrome Side Panel for real-time telemetry.
 ### Averaging Multiple Runs
 To account for variance in human motor performance, you can record multiple runs of the *same* task.
 
-1.  After stopping the first run, click **REPEAT TEST** (formerly Start).
+1.  After stopping the first run, click **Start** again.
 2.  Reset the web page state (e.g., go back to start URL).
 3.  Perform the task again and Stop.
 4.  The counter will show `RUNS: 2`.
@@ -104,6 +117,9 @@ For sharing on GitHub or Slack without using the TUI:
 ```bash
 # Generate a Markdown table with insights
 uxbench compare --format markdown design_a.json design_b.json > results.md
+
+# Export as CSV for spreadsheet analysis
+uxbench compare --format csv design_a.json design_b.json > results.csv
 ```
 
 ---
@@ -111,7 +127,7 @@ uxbench compare --format markdown design_a.json design_b.json > results.md
 ## Troubleshooting
 
 **"Extension Error: Service worker inactive"**
-Manifest V3 service workers go to sleep. Open the Side Panel before recording -- it keeps the worker alive via telemetry polling. If the extension seems unresponsive, click the icon to wake it up.
+Manifest V3 service workers go to sleep. Open the Side Panel before recording — it keeps the worker alive via event-driven communication. If the extension seems unresponsive, click the icon to wake it up.
 
 **"CLI: command not found"**
 Ensure `$HOME/go/bin` is in your shell `PATH`, or run the binary locally using `./cli/uxbench`.

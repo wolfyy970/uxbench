@@ -1,30 +1,40 @@
 // Scroll distance collector — rAF-sampled passive scroll listener
 // Tracks both page-level and container-level scroll distances.
 
+import { NOOP } from './shared';
+
 export class ScrollCollector {
+    private readonly captureOpts: AddEventListenerOptions = { capture: true, passive: true };
     private pageHandler = () => this.scheduleUpdate('page');
     private lastPageY = 0;
+    private lastPageX = 0;
     private lastContainerY: Map<EventTarget, number> = new Map();
+    private lastContainerX: Map<EventTarget, number> = new Map();
     private pendingUpdate: 'page' | 'container' | null = null;
     private rafId = 0;
 
     private totalPx = 0;
     private pageScrollPx = 0;
     private containerScrollPx = 0;
+    private totalHorizontalPx = 0;
     private scrollEvents = 0;
-    private containerScrollMap: Map<string, number> = new Map();
+    private containerScrollMap: Map<EventTarget, { label: string; px: number }> = new Map();
+
+    // Callback for cross-collector coordination (density sampling on scroll)
+    onScrollCaptured: (() => void) | null = null;
 
     attach() {
         this.lastPageY = window.scrollY;
+        this.lastPageX = window.scrollX;
         // Passive listener on window for page scroll
         window.addEventListener('scroll', this.pageHandler, { passive: true });
         // Capture-phase listener catches scroll on any container element
-        document.addEventListener('scroll', this.containerHandler, { capture: true, passive: true });
+        document.addEventListener('scroll', this.containerHandler, this.captureOpts);
     }
 
     detach() {
         window.removeEventListener('scroll', this.pageHandler);
-        document.removeEventListener('scroll', this.containerHandler, { capture: true } as any);
+        document.removeEventListener('scroll', this.containerHandler, this.captureOpts);
         if (this.rafId) cancelAnimationFrame(this.rafId);
         this.flush();
     }
@@ -53,34 +63,51 @@ export class ScrollCollector {
 
     private processPageScroll() {
         const currentY = window.scrollY;
-        const delta = Math.abs(currentY - this.lastPageY);
+        const currentX = window.scrollX;
+        const deltaY = Math.abs(currentY - this.lastPageY);
+        const deltaX = Math.abs(currentX - this.lastPageX);
+        const delta = deltaY + deltaX;
         if (delta > 0) {
             this.pageScrollPx += delta;
             this.totalPx += delta;
+            this.totalHorizontalPx += deltaX;
             this.scrollEvents += 1;
             this.lastPageY = currentY;
+            this.lastPageX = currentX;
             this.sendUpdate();
+            if (this.onScrollCaptured) this.onScrollCaptured();
         }
     }
 
     private processContainerScroll(target: EventTarget) {
         const el = target as HTMLElement;
         const currentY = el.scrollTop;
+        const currentX = el.scrollLeft;
         const lastY = this.lastContainerY.get(target) || 0;
-        const delta = Math.abs(currentY - lastY);
+        const lastX = this.lastContainerX.get(target) || 0;
+        const deltaY = Math.abs(currentY - lastY);
+        const deltaX = Math.abs(currentX - lastX);
+        const delta = deltaY + deltaX;
 
         if (delta > 0) {
             this.containerScrollPx += delta;
             this.totalPx += delta;
+            this.totalHorizontalPx += deltaX;
             this.scrollEvents += 1;
             this.lastContainerY.set(target, currentY);
+            this.lastContainerX.set(target, currentX);
 
-            // Track per-container totals for "heaviest_container"
-            const identifier = el.id || el.className?.split(' ')[0] || el.tagName;
-            const existing = this.containerScrollMap.get(identifier) || 0;
-            this.containerScrollMap.set(identifier, existing + delta);
+            // Track per-container totals for "heaviest_container" (keyed by element reference)
+            const label = el.id || el.className?.split(' ')[0] || el.tagName;
+            const existing = this.containerScrollMap.get(target);
+            if (existing) {
+                existing.px += delta;
+            } else {
+                this.containerScrollMap.set(target, { label, px: delta });
+            }
 
             this.sendUpdate();
+            if (this.onScrollCaptured) this.onScrollCaptured();
         }
     }
 
@@ -88,9 +115,9 @@ export class ScrollCollector {
         // Find heaviest container
         let heaviest = '';
         let heaviestPx = 0;
-        for (const [id, px] of this.containerScrollMap) {
+        for (const { label, px } of this.containerScrollMap.values()) {
             if (px > heaviestPx) {
-                heaviest = id;
+                heaviest = label;
                 heaviestPx = px;
             }
         }
@@ -102,10 +129,11 @@ export class ScrollCollector {
                 total_px: this.totalPx,
                 page_scroll_px: this.pageScrollPx,
                 container_scroll_px: this.containerScrollPx,
+                total_horizontal_px: this.totalHorizontalPx,
                 scroll_events: this.scrollEvents,
                 heaviest_container: heaviest || null
             }
-        }).catch(() => {});
+        }).catch(NOOP);
     }
 
     private flush() {
@@ -116,8 +144,10 @@ export class ScrollCollector {
         this.totalPx = 0;
         this.pageScrollPx = 0;
         this.containerScrollPx = 0;
+        this.totalHorizontalPx = 0;
         this.scrollEvents = 0;
         this.containerScrollMap.clear();
         this.lastContainerY.clear();
+        this.lastContainerX.clear();
     }
 }

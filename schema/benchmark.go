@@ -66,10 +66,10 @@ type TimeOnTask struct {
 	LongestIdleAfter  *string       `json:"longest_idle_after"`
 	LongestWaitMS     *int          `json:"longest_wait_ms"`
 	LongestWaitTrigger *string      `json:"longest_wait_trigger"`
-	ConfusionGaps     []ConfusionGap `json:"confusion_gaps"`
+	IdleGaps          []IdleGap      `json:"idle_gaps"`
 }
 
-type ConfusionGap struct {
+type IdleGap struct {
 	GapMS        float64 `json:"gap_ms"`
 	AfterAction  string  `json:"after_action"`
 	BeforeAction string  `json:"before_action"`
@@ -120,16 +120,7 @@ type ContextSwitches struct {
 }
 
 type ShortcutCoverage struct {
-	ShortcutsUsed      int                  `json:"shortcuts_used"`
-	MouseWithShortcut  int                  `json:"mouse_with_shortcut"`
-	Ratio              float64              `json:"ratio"`
-	AccesskeysFound    *int                 `json:"accesskeys_found"`
-	MissedShortcuts    []MissedShortcut     `json:"missed_shortcuts"`
-}
-
-type MissedShortcut struct {
-	Action   string `json:"action"`
-	Shortcut string `json:"shortcut"`
+	ShortcutsUsed int `json:"shortcuts_used"`
 }
 
 type TypingRatio struct {
@@ -178,11 +169,11 @@ type DecisionTime struct {
 	MeanMS        float64          `json:"mean_ms"`
 	MedianMS      float64          `json:"median_ms"`
 	P90MS         float64          `json:"p90_ms"`
-	ConfusionGaps int              `json:"confusion_gaps"`
-	WorstConfusion *ConfusionDetail `json:"worst_confusion"`
+	IdleGaps       int          `json:"idle_gaps"`
+	WorstIdle      *IdleDetail  `json:"worst_idle"`
 }
 
-type ConfusionDetail struct {
+type IdleDetail struct {
 	GapMS       float64 `json:"gap_ms"`
 	AfterAction string  `json:"after_action"`
 	LikelyCause string  `json:"likely_cause"`

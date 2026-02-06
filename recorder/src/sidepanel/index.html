@@ -5,252 +5,621 @@
   <meta charset="utf-8">
   <title>UX BENCH</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    /* ========================================================
+       DESIGN SYSTEM — Primitive Tokens
+       Raw palette values. Never referenced directly in components.
+       ======================================================== */
     :root {
-      --term-green: #33ff33;
-      --term-dim: #1a661a;
-      --term-bg: #050505;
-      --term-border: #33ff33;
+      /* Palette */
+      --ds-black:       #020202;
+      --ds-dark:        #101010;
+      --ds-charcoal:    #3E3A39;
+      --ds-warm-gray:   #8A8381;
+      --ds-orange:      #EE6019;
+      --ds-light:       #EEEEEE;
+
+      /* ========================================================
+         DESIGN SYSTEM — Semantic Tokens (Backgrounds)
+         ======================================================== */
+      --bg-base:        var(--ds-black);
+      --bg-raised:      var(--ds-dark);
+      --bg-overlay:     var(--ds-charcoal);
+
+      /* ========================================================
+         DESIGN SYSTEM — Semantic Tokens (Foreground / Text)
+         ======================================================== */
+      --fg-default:     var(--ds-light);
+      --fg-muted:       var(--ds-warm-gray);
+      --fg-faint:       var(--ds-charcoal);
+      --fg-accent:      var(--ds-orange);
+
+      /* ========================================================
+         DESIGN SYSTEM — Semantic Tokens (Borders)
+         ======================================================== */
+      --border-default: var(--ds-charcoal);
+      --border-subtle:  color-mix(in srgb, var(--ds-charcoal) 50%, var(--ds-black));
+      --border-focus:   var(--ds-orange);
+
+      /* ========================================================
+         DESIGN SYSTEM — Semantic Tokens (Feedback)
+         ======================================================== */
+      /* Glow derived from accent color */
+      --glow-accent:    color-mix(in srgb, var(--ds-orange) 25%, transparent);
+
+      /* Interactive surface tints */
+      --tint-hover:     color-mix(in srgb, var(--ds-orange) 10%, transparent);
+      --tint-active:    color-mix(in srgb, var(--ds-orange) 18%, transparent);
+      --tint-danger:    color-mix(in srgb, var(--ds-orange) 8%, transparent);
+      --tint-danger-h:  color-mix(in srgb, var(--ds-orange) 15%, transparent);
+
+      /* ========================================================
+         DESIGN SYSTEM — Typography Scale
+         Uses a minor-third ratio (~1.2) compressed for sidebar.
+         ======================================================== */
+      --font-family:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+      --text-h1:        13px;   /* panel title / hero number       */
+      --text-h2:        11px;   /* section header, prominent value  */
+      --text-body:      10px;   /* default body, metric values      */
+      --text-caption:    9px;   /* labels, timestamps, fine print   */
+
+      --weight-regular:  400;
+      --weight-medium:   500;
+      --weight-semi:     600;
+      --weight-bold:     700;
+
+      --leading-tight:   1.2;
+      --leading-normal:  1.4;
+
+      --tracking-normal: 0.5px;
+      --tracking-wide:   1px;
+      --tracking-wider:  1.5px;
+
+      /* ========================================================
+         DESIGN SYSTEM — Spacing Scale (4px base)
+         ======================================================== */
+      --space-1:  2px;
+      --space-2:  4px;
+      --space-3:  6px;
+      --space-4:  8px;
+      --space-5: 10px;
+      --space-6: 12px;
+      --space-7: 16px;
+      --space-8: 20px;
+
+      /* ========================================================
+         DESIGN SYSTEM — Radius & Shadows
+         ======================================================== */
+      --radius-sm:  2px;
+      --radius-md:  4px;
+      --radius-lg:  6px;
+      --radius-full: 9999px;
+
+      --shadow-glow-accent: 0 0 4px var(--glow-accent);
+      --shadow-glow-rec:    0 0 6px var(--glow-accent);
+
+      /* ========================================================
+         DESIGN SYSTEM — Transitions
+         ======================================================== */
+      --ease-default: 0.15s ease;
+
+      /* ========================================================
+         DESIGN SYSTEM — Scrollbar
+         ======================================================== */
+      --scrollbar-w: 3px;
     }
 
+
+    /* ========================================================
+       BASE RESET
+       ======================================================== */
+    *, *::before, *::after { box-sizing: border-box; }
+
     body {
-      background-color: var(--term-bg);
-      color: var(--term-green);
-      font-family: "Menlo", "Monaco", "Courier New", monospace;
-      font-size: 11px;
-      padding: 10px;
+      background-color: var(--bg-base);
+      color: var(--fg-default);
+      font-family: var(--font-family);
+      font-size: var(--text-body);
+      font-weight: var(--weight-regular);
+      line-height: var(--leading-normal);
+      padding: 0;
       margin: 0;
       height: 100vh;
-      box-sizing: border-box;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
-    body::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-      background-size: 100% 2px;
-      pointer-events: none;
-      opacity: 0.3;
+
+    /* ========================================================
+       TYPOGRAPHY UTILITIES
+       ======================================================== */
+    .t-h1 {
+      font-size: var(--text-h1);
+      font-weight: var(--weight-bold);
+      line-height: var(--leading-tight);
+      letter-spacing: var(--tracking-wider);
     }
 
+    .t-h2 {
+      font-size: var(--text-h2);
+      font-weight: var(--weight-semi);
+      line-height: var(--leading-tight);
+      letter-spacing: var(--tracking-normal);
+    }
+
+    .t-body {
+      font-size: var(--text-body);
+      font-weight: var(--weight-medium);
+      line-height: var(--leading-normal);
+    }
+
+    .t-caption {
+      font-size: var(--text-caption);
+      font-weight: var(--weight-semi);
+      line-height: var(--leading-tight);
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+    }
+
+    .t-mono {
+      font-variant-numeric: tabular-nums;
+    }
+
+
+    /* ========================================================
+       LAYOUT — Panel Shell
+       ======================================================== */
     .hud-panel {
-      border: 1px solid var(--term-dim);
       display: flex;
       flex-direction: column;
       flex: 1;
-      padding: 4px;
+      padding: var(--space-6);
+      overflow: hidden;
+      gap: var(--space-5);
     }
 
+
+    /* ========================================================
+       COMPONENT — Header Bar
+       ======================================================== */
     header {
-      background: var(--term-green);
-      color: var(--term-bg);
-      font-weight: 900;
-      padding: 4px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4) var(--space-5);
       display: flex;
       justify-content: space-between;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
+      align-items: center;
+      flex-shrink: 0;
     }
 
+    .header-brand {
+      color: var(--fg-accent);
+    }
+
+    .header-meta {
+      font-size: var(--text-body);
+      font-weight: var(--weight-medium);
+      color: var(--fg-faint);
+    }
+
+    .header-clock {
+      font-size: var(--text-h2);
+      font-weight: var(--weight-semi);
+      color: var(--fg-muted);
+    }
+
+
+    /* ========================================================
+       COMPONENT — Section
+       ======================================================== */
     .section {
-      border-left: 1px dashed var(--term-dim);
-      padding-left: 6px;
-      margin-bottom: 8px;
+      flex-shrink: 0;
     }
 
-    .label {
-      color: var(--term-dim);
-      font-size: 9px;
-      margin-bottom: 2px;
+    .section-label {
+      color: var(--fg-faint);
       display: block;
+      margin-bottom: var(--space-3);
     }
 
+
+    /* ========================================================
+       COMPONENT — Checklist (Pre-flight)
+       ======================================================== */
     .checklist {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: var(--space-2);
     }
 
     .check-item {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: var(--space-4);
+      font-size: var(--text-body);
+      color: var(--fg-muted);
     }
 
     .check-box {
-      width: 8px;
-      height: 8px;
-      border: 1px solid var(--term-green);
+      width: var(--space-5);
+      height: var(--space-5);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
       display: inline-block;
+      background: var(--bg-overlay);
+      flex-shrink: 0;
     }
 
+    body.recording .preflight {
+      display: none;
+    }
+
+
+    /* ========================================================
+       COMPONENT — Button
+       ======================================================== */
     button {
-      background: transparent;
-      color: var(--term-green);
-      border: 1px solid var(--term-green);
-      padding: 8px;
-      font-family: inherit;
-      font-size: 11px;
-      font-weight: bold;
+      background: var(--bg-raised);
+      color: var(--fg-default);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4) var(--space-5);
+      font-family: var(--font-family);
+      font-size: var(--text-body);
+      font-weight: var(--weight-semi);
+      letter-spacing: var(--tracking-normal);
       text-transform: uppercase;
       cursor: pointer;
       width: 100%;
       text-align: center;
-      margin-bottom: 4px;
+      flex-shrink: 0;
+      transition: all var(--ease-default);
     }
 
     button:hover {
-      background: rgba(51, 255, 51, 0.1);
+      background: var(--tint-hover);
+      border-color: var(--fg-faint);
     }
 
     button:active {
       transform: translateY(1px);
+      background: var(--tint-active);
     }
 
     button:disabled {
-      border-color: var(--term-dim);
-      color: var(--term-dim);
+      border-color: var(--border-subtle);
+      color: var(--fg-faint);
       cursor: not-allowed;
       pointer-events: none;
-      opacity: 0.5;
+      opacity: 0.4;
     }
 
-    /* Select Styling with Chevron */
+    .btn-row {
+      display: flex;
+      gap: var(--space-3);
+    }
+
+    .btn-flex-2 { flex: 2; }
+    .btn-flex-1 { flex: 1; }
+
+
+    /* ========================================================
+       COMPONENT — Select
+       ======================================================== */
     select {
       width: 100%;
-      background: #000;
-      color: #33ff33;
-      border: 1px dashed var(--term-dim);
-      font-family: inherit;
-      font-size: 10px;
-      padding: 4px;
+      background: var(--bg-raised);
+      color: var(--fg-default);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      font-family: var(--font-family);
+      font-size: var(--text-body);
+      padding: var(--space-3) var(--space-4);
       outline: none;
-      border-radius: 0;
       -webkit-appearance: none;
       appearance: none;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2333ff33' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      /* Chevron icon — stroke color references ds-warm-gray */
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8381' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
       background-repeat: no-repeat;
-      background-position: right 4px center;
-      background-size: 12px;
+      background-position: right var(--space-3) center;
+      background-size: var(--space-6);
+      transition: border-color var(--ease-default);
     }
 
-    /* Telemetry Grid */
-    .telemetry-grid {
+    select:hover  { border-color: var(--fg-faint); }
+    select:focus  { border-color: var(--border-focus); }
+
+
+    /* ========================================================
+       COMPONENT — Card (shared surface for metric grid & feed)
+       ======================================================== */
+    .card {
+      background: var(--bg-raised);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4) var(--space-5);
+    }
+
+
+    /* ========================================================
+       COMPONENT — Metric Grid
+       ======================================================== */
+    .metric-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 4px;
-      margin-bottom: 4px;
+      gap: var(--space-1) var(--space-6);
     }
 
-    .telemetry-item {
+    .metric-cell {
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      padding: var(--space-1) 0;
     }
 
-    .telemetry-val {
-      color: #fff;
+    .metric-key {
+      color: var(--fg-faint);
+      font-size: var(--text-caption);
+      font-weight: var(--weight-medium);
+      letter-spacing: var(--tracking-normal);
     }
 
-    /* Stats */
-    #status {
-      font-size: 9px;
-      margin-top: 4px;
-      border-top: 1px solid var(--term-dim);
-      padding-top: 4px;
+    .metric-val {
+      color: var(--fg-default);
+      font-weight: var(--weight-semi);
+    }
+
+    .metric-cost {
+      grid-column: 1 / -1;
+      border-top: 1px solid var(--border-default);
+      padding-top: var(--space-2);
+      margin-top: var(--space-1);
+    }
+
+    .metric-cost .metric-key {
+      color: var(--fg-muted);
+      font-weight: var(--weight-semi);
+    }
+
+    .metric-cost .metric-val {
+      color: var(--fg-accent);
+      font-size: var(--text-h2);
+    }
+
+
+    /* ========================================================
+       COMPONENT — Activity Feed
+       ======================================================== */
+    .feed-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+      padding-right: 0;
+    }
+
+    .feed-section > .section-label {
+      padding-right: var(--space-5);
+    }
+
+    .feed {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 var(--space-5) 0 0;
+      scroll-behavior: smooth;
+    }
+
+    /* Scrollbar */
+    .feed::-webkit-scrollbar               { width: var(--scrollbar-w); }
+    .feed::-webkit-scrollbar-track          { background: transparent; }
+    .feed::-webkit-scrollbar-thumb          { background: var(--border-default); border-radius: var(--radius-full); }
+    .feed::-webkit-scrollbar-thumb:hover    { background: var(--fg-faint); }
+
+    /* Entry row */
+    .feed-entry {
+      display: grid;
+      grid-template-columns: 34px 14px 1fr;
+      min-height: var(--space-8);
+    }
+
+    /* Timestamp */
+    .feed-ts {
+      color: var(--fg-faint);
+      font-size: var(--text-caption);
+      text-align: right;
+      padding-right: var(--space-3);
+      padding-top: var(--space-1);
+    }
+
+    /* Timeline rail */
+    .feed-node {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+
+    .feed-node::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--border-default);
+    }
+
+    .feed-entry:first-child .feed-node::before { top: 50%; }
+
+    /* Dot on the rail */
+    .feed-dot {
+      position: relative;
+      z-index: 1;
+      width: 7px;
+      height: 7px;
+      border-radius: var(--radius-full);
+      background: var(--fg-accent);
+      margin-top: var(--space-3);
+      flex-shrink: 0;
+      box-shadow: var(--shadow-glow-accent);
+    }
+
+    /* Content */
+    .feed-content {
+      padding: var(--space-1) 0 var(--space-2) var(--space-3);
+      min-width: 0;
+    }
+
+    .feed-label {
+      font-size: var(--text-body);
+      font-weight: var(--weight-medium);
+      color: var(--fg-default);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .feed-detail {
+      color: var(--fg-muted);
+      font-size: var(--text-caption);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 1px;
+    }
+
+    /* Empty state */
+    .feed-empty {
+      color: var(--fg-faint);
+      font-size: var(--text-body);
+      text-align: center;
+      padding: var(--space-8) 0;
+    }
+
+
+    /* ========================================================
+       COMPONENT — Status Bar
+       ======================================================== */
+    .status-bar {
+      font-size: var(--text-caption);
+      border-top: 1px solid var(--border-default);
+      padding-top: var(--space-4);
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+      color: var(--fg-faint);
     }
 
-    /* Recording State */
+
+    /* ========================================================
+       COMPONENT — Recording Indicator
+       ======================================================== */
     .rec-indicator {
       display: inline-block;
-      width: 8px;
-      height: 8px;
-      background: var(--term-dim);
-      border-radius: 50%;
-      margin-right: 4px;
+      width: var(--space-3);
+      height: var(--space-3);
+      background: var(--fg-faint);
+      border-radius: var(--radius-full);
+      margin-right: var(--space-3);
+      vertical-align: middle;
     }
 
     body.recording .rec-indicator {
-      background: var(--term-green);
-      animation: flash 0.5s infinite;
+      background: var(--fg-accent);
+      box-shadow: var(--shadow-glow-rec);
+      animation: pulse 1.5s ease-in-out infinite;
     }
 
     body.recording button#actionBtn {
-      border-color: #ff3333;
-      color: #ff3333;
+      border-color: var(--fg-accent);
+      color: var(--fg-accent);
+      background: var(--tint-danger);
     }
 
-    @keyframes blink {
-      50% {
-        opacity: 0;
-      }
+    body.recording button#actionBtn:hover {
+      background: var(--tint-danger-h);
     }
 
-    @keyframes flash {
-      50% {
-        opacity: 0.3;
-      }
+
+    /* ========================================================
+       ANIMATION
+       ======================================================== */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.3; }
     }
   </style>
 </head>
 
 <body>
   <div class="hud-panel">
+
     <header>
-      <span>UX_REC_V1</span>
-      <span id="runCount">RUNS: 0</span>
-      <span id="liveTime">00:00</span>
+      <span class="header-brand t-h1">UX BENCH</span>
+      <span class="header-meta t-body" id="runCount">RUNS: 0</span>
+      <span class="header-clock t-h2 t-mono" id="liveTime">00:00</span>
     </header>
 
     <div class="section">
-      <span class="label">VIEWPORT SIZE</span>
+      <span class="section-label t-caption">Viewport</span>
       <select id="resSelect">
-        <option value="" disabled selected>-- SELECT --</option>
-        <option value="1024x768">1024 x 768 (TABLET)</option>
-        <option value="1280x800">1280 x 800 (LAPTOP)</option>
-        <option value="1366x768">1366 x 768 (COMMON)</option>
-        <option value="1440x900">1440 x 900 (DESKTOP)</option>
-        <option value="1920x1080">1920 x 1080 (HD)</option>
+        <option value="" disabled selected>Select resolution</option>
+        <option value="1024x768">1024 × 768 — Tablet</option>
+        <option value="1280x800">1280 × 800 — Laptop</option>
+        <option value="1366x768">1366 × 768 — Common</option>
+        <option value="1440x900">1440 × 900 — Desktop</option>
+        <option value="1920x1080">1920 × 1080 — Full HD</option>
       </select>
     </div>
 
-    <div class="section">
-      <span class="label">PRE-FLIGHT</span>
+    <div class="section preflight">
+      <span class="section-label t-caption">Pre-flight</span>
       <div class="checklist">
-        <div class="check-item"><span class="check-box"></span> NAVIGATE TO URL</div>
-        <div class="check-item"><span class="check-box"></span> CENTER CURSOR ON PAGE</div>
+        <div class="check-item"><span class="check-box"></span> Navigate to target URL</div>
+        <div class="check-item"><span class="check-box"></span> Center cursor on page</div>
       </div>
     </div>
 
-    <div class="section" style="flex: 1; display: flex; flex-direction: column;">
-      <span class="label">TELEMETRY</span>
-      <div class="telemetry-grid">
-        <div class="telemetry-item"><span>CLICKS:</span> <span id="liveClicks" class="telemetry-val">--</span></div>
-        <div class="telemetry-item"><span>DEPTH:</span> <span id="liveDepth" class="telemetry-val">--</span></div>
-        <div class="telemetry-item"><span>SCROLL:</span> <span id="liveScroll" class="telemetry-val">--</span></div>
-        <div class="telemetry-item"><span>SWITCHES:</span> <span id="liveSwitches" class="telemetry-val">--</span></div>
+    <div class="section">
+      <span class="section-label t-caption">Metrics</span>
+      <div class="metric-grid card">
+        <div class="metric-cell"><span class="metric-key" title="Total clicks recorded (productive, ceremonial, and wasted)">CLICKS</span><span id="mClicks" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Navigation depth — how many UI layers deep the user goes (modals, drawers, sub-menus)">DEPTH</span><span id="mDepth" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Total scroll distance in pixels — higher values may indicate content is hard to find">SCROLL</span><span id="mScroll" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Fitts' Law index of difficulty — average effort to reach click targets (distance vs. size)">FITTS</span><span id="mFitts" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Context switches between mouse and keyboard input modes">SWITCHES</span><span id="mSwitches" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Information density — ratio of content area to total viewport area">DENSITY</span><span id="mDensity" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Modifier-key combos used (Ctrl/Cmd/Alt + key) — signals keyboard proficiency">SHORTCUTS</span><span id="mShortcuts" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Typing ratio — free-text inputs vs. constrained inputs (dropdowns, toggles, pickers)">TYPING</span><span id="mTyping" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Average scanning distance in pixels between consecutive click targets">SCAN</span><span id="mScan" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Application wait time — time spent waiting for the application to respond">WAIT</span><span id="mWait" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell metric-cost"><span class="metric-key" title="Composite interaction cost score — weighted sum of all metrics (lower is better)">COST</span><span id="mCost" class="metric-val t-mono">--</span></div>
       </div>
-      <div id="results"
-        style="display:none; flex: 1; overflow-y: auto; margin-top: 4px; border-top: 1px dashed var(--term-dim);"></div>
     </div>
 
-    <button id="actionBtn" disabled>START</button>
-    <div style="display: flex; gap: 4px;">
-      <button id="downloadBtn" disabled style="flex: 2;">DOWNLOAD</button>
-      <button id="clearBtn" disabled style="flex: 1; border-style: dashed;">CLEAR</button>
+    <div class="section feed-section card">
+      <span class="section-label t-caption">Activity</span>
+      <div id="feed" class="feed">
+        <div class="feed-empty">Waiting for recording...</div>
+      </div>
     </div>
 
-    <div id="status">
-      <span><span class="rec-indicator"></span>SYS_RDY</span>
-      <span>CMD+SHFT+R</span>
+    <button id="actionBtn" disabled>Start</button>
+    <div class="btn-row">
+      <button id="downloadBtn" class="btn-flex-2" disabled>Download</button>
+      <button id="clearBtn" class="btn-flex-1" disabled>Clear</button>
     </div>
+
+    <div class="status-bar" id="status">
+      <span><span class="rec-indicator"></span>Ready</span>
+      <span>⌘⇧R</span>
+    </div>
+
   </div>
 
   <script src="sidepanel.js"></script>

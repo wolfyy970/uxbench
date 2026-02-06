@@ -29,7 +29,18 @@ We model "Work" in three dimensions:
 
 ### 2.1 Fitts's Law (Index of Difficulty)
 **The Concept:** Not all clicks are equal. Clicking a tiny button 800px away requires significantly more motor planning and precision (and is more error-prone) than clicking a large button nearby.
-**Methodology:** We use the **Shannon Formulation** of Fitts's Law. We sample the *actual* cursor path at 60Hz to determine the starting position of every movement, and compare it to the geometry of the target element.
+**Methodology:** We use the **Shannon Formulation** of Fitts's Law with **Welford's directional target width**. Rather than using `min(width, height)` as the effective target size (which ignores approach angle), we compute:
+
+```
+W_eff = width × |cos(θ)| + height × |sin(θ)|
+```
+
+where `θ` is the angle of approach from the previous cursor position to the target center. This means a wide horizontal button is easier to hit when approached horizontally, but not when approached vertically — matching real motor behavior. The final Index of Difficulty is:
+
+```
+ID = log₂(D / W_eff + 1)
+```
+
 **Interpretation:**
 *   **Low ID (< 1.0):** Effortless. The user seemingly "thinks" a click and it happens.
 *   **High ID (> 4.5):** High precision required. Users will inadvertently slow down to ensure accuracy.
@@ -39,8 +50,8 @@ We model "Work" in three dimensions:
 **The Concept:** Total click count is a blunt instrument. We separate clicks by *intent*.
 **Categories:**
 *   **Productive:** Advances the task (e.g., filling a form, clicking 'Next').
-*   **Ceremonial:** Interface overhead (e.g., closing popups, dismissing cookie banners).
-*   **Wasted:** Clicks that produced no change (e.g., rage clicks, clicking disabled buttons).
+*   **Ceremonial:** Interface overhead (e.g., closing popups, dismissing cookie banners). Detection uses narrowed selectors targeting cookie/consent/GDPR/privacy patterns to avoid false positives on legitimate UI elements.
+*   **Wasted:** Clicks that produced no change (e.g., rage clicks, clicking disabled buttons). Double-click detection excludes editable elements (text inputs, contentEditable) where double-click is intentional (word selection).
 **Interpretation:** A reduction in *Ceremonial* clicks (removing friction) is often more valuable than a reduction in *Productive* clicks (simplifying the task), as ceremonial clicks feel like "chores" to the user.
 
 ### 2.3 Typing vs. Constrained Input
@@ -54,6 +65,14 @@ We model "Work" in three dimensions:
 
 ### 3.1 Information Density
 **The Concept:** Visual clutter increases search time. We measure the ratio of "content pixels" (text, images, controls) to total viewport area.
+**Methodology:** We use **semantic weighting** rather than raw pixel coverage. Not all visible elements contribute equally to information load:
+*   **Weight 1.0:** Primary content — text (p, h1–h6, li, td, th, label, span with text).
+*   **Weight 0.7–0.8:** Interactive elements — inputs, selects, buttons, tables.
+*   **Weight 0.5:** Media — images, links.
+*   **Weight 0.3:** Decorative — SVGs, generic containers.
+
+Density is sampled at interaction time (each click) and during scroll events (throttled to one sample per 2 seconds), then averaged across all samples.
+
 **Interpretation:**
 *   **< 15% (Sparse):** Good for focus, but requires more scrolling/navigation to see data.
 *   **15%–50% (Balanced):** Optimal for most enterprise applications.
@@ -66,6 +85,7 @@ We model "Work" in three dimensions:
 
 ### 3.3 Context Switches
 **The Concept:** Switching between Mouse and Keyboard breaks flow. It requires a physical posture change and a mental mode shift.
+**Methodology:** We track contiguous input "streaks" (consecutive mouse or keyboard actions). A context switch is recorded when the input modality changes. The longest keyboard and mouse streaks are preserved as indicators of flow continuity — long streaks mean the user stayed in one mode, which is good. Streaks are finalized at recording stop to avoid losing the final in-progress streak.
 **Interpretation:** High switch counts indicate a disjointed UI.
 *   *Bad:* Type Name -> Click Tab -> Type Address -> Click Tab. (high friction)
 *   *Good:* Type Name -> Tab key -> Type Address. (low friction)
@@ -77,19 +97,33 @@ We model "Work" in three dimensions:
 
 ### 4.1 Navigation Depth
 **The Concept:** How many "layers" deep is the user? (e.g., Page > Modal > Popover > Tooltip).
+**Methodology:** A MutationObserver monitors the DOM for UI layer changes. Detected layer types include:
+*   **Standards-based:** `dialog[open]`, `[role="dialog"]`, `[role="alertdialog"]`, `[role="menu"]`, `[role="listbox"]`, `[aria-modal="true"]`, `[popover]:popover-open`, `details[open]`.
+*   **Framework patterns:** `.modal`, `.popover`, `.popup`, `.dropdown-menu`, `.overlay`, `.lightbox`, `[data-modal]`, `[data-popup]`.
+*   **Transient UI:** `[class*="toast"]`, `[class*="snackbar"]`, `[role="status"]` toast variants.
+
+Only visible layers (non-hidden, non-zero opacity, non-zero width) are counted. The depth path records up to the last 50 open/close transitions.
+
 **Interpretation:**
 *   **Depth 1-2:** ideal. The user feels grounded.
 *   **Depth 3+:** "Lost in navigation." Users lose context of the background task. Closing the top layer often results in a momentary "where was I?" disorientation.
 
 ### 4.2 Application Wait Time
 **The Concept:** Time the user spends waiting for the system (spinners, skeleton screens), distinct from time they spend thinking.
+**Methodology:** A dedicated `WaitCollector` uses a MutationObserver plus a 500ms periodic check to detect visible loading indicators in the DOM. Detected patterns include:
+*   `[class*="spinner"]`, `[class*="loading"]`, `[class*="skeleton"]`, `[class*="loader"]`
+*   `[class*="progress"]`, `[role="progressbar"]`, `[aria-busy="true"]`
+*   `.shimmer`, `[class*="placeholder"]`
+
+Only elements that are visible (non-hidden, non-zero opacity, non-zero width) trigger wait timing. The collector measures cumulative milliseconds the user spent looking at loading states.
+
 **Interpretation:** This is pure waste. It is the single highest-weighted penalty in our Interaction Cost model.
 
-### 4.3 Decision Time vs. Confusion Gaps
+### 4.3 Decision Time vs. Idle Gaps
 **The Concept:** We measure the idle time *between* actions.
 *   **< 500ms:** Flow state. The user knows exactly what to do next.
-*   **> 3s (Confusion Gap):** The user has stopped to think, read, or search.
-**Interpretation:** A cluster of "Confusion Gaps" at a specific step is a strong signal of poor affordance or unclear copy. The user is asking, "What do I do now?"
+*   **> 3s (Idle Gap):** The user has paused — they may be thinking, reading, or searching.
+**Interpretation:** A cluster of idle gaps at a specific step may signal poor affordance or unclear copy. Cross-reference with the action log to understand context.
 
 ---
 

@@ -149,7 +149,7 @@ describe('worker.ts', () => {
         it('should set badge text when chrome.action is available', async () => {
             await sendMessage({ type: 'START_RECORDING' });
             expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: 'REC' });
-            expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({ color: '#FF0000' });
+            expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({ color: '#EE6019' });
         });
     });
 
@@ -259,7 +259,9 @@ describe('worker.ts', () => {
             expect(m.scanning_distance.cumulative_px).toBe(400);
             expect(m.scanning_distance.average_px).toBe(400);
 
-            const expectedID = Math.log2(400 / 20 + 1);
+            // Welford directional target width: movement is purely horizontal (dx=400, dy=0)
+            // angle = atan2(0, 400) = 0, so effective width = 40*cos(0) + 20*sin(0) = 40
+            const expectedID = Math.log2(400 / 40 + 1);
             expect(m.fitts.cumulative_id).toBeCloseTo(expectedID, 2);
             expect(m.fitts.average_id).toBeCloseTo(expectedID, 2);
             expect(m.fitts.max_id).toBeCloseTo(expectedID, 2);
@@ -302,7 +304,7 @@ describe('worker.ts', () => {
             expect(log[0].text).toBe('Home');
         });
 
-        it('should write live stats to storage', async () => {
+        it('should write live stats to storage with all metrics', async () => {
             await sendMessage({
                 type: 'EVENT_CAPTURED',
                 payload: {
@@ -314,6 +316,59 @@ describe('worker.ts', () => {
             const { stats } = await chrome.storage.local.get('stats');
             expect(stats).toBeDefined();
             expect(stats.clicks).toBe(1);
+            // Expanded stats should include all metric fields
+            expect(stats).toHaveProperty('depth');
+            expect(stats).toHaveProperty('scroll');
+            expect(stats).toHaveProperty('switches');
+            expect(stats).toHaveProperty('composite');
+            expect(stats).toHaveProperty('fitts');
+            expect(stats).toHaveProperty('density');
+            expect(stats).toHaveProperty('shortcuts');
+            expect(stats).toHaveProperty('typing');
+            expect(stats).toHaveProperty('scanAvg');
+            expect(stats).toHaveProperty('waitMs');
+        });
+
+        it('should broadcast FEED_EVENT after click event', async () => {
+            chrome.runtime.sendMessage.mockClear();
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 10, y: 10,
+                    classification: 'productive',
+                    target: { tagName: 'BUTTON', id: 'save', innerText: 'Save', rect: { width: 80, height: 32 } }
+                }
+            });
+
+            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
+                (call: any[]) => call[0]?.type === 'FEED_EVENT'
+            );
+            expect(feedCalls.length).toBeGreaterThanOrEqual(1);
+            const feedEvent = feedCalls[feedCalls.length - 1][0].event;
+            expect(feedEvent.type).toBe('click');
+            expect(feedEvent.label).toContain('CLK');
+            expect(feedEvent.label).toContain('BUTTON');
+            expect(feedEvent.metricUpdates).toBeDefined();
+            expect(feedEvent.metricUpdates.clicks).toBeDefined();
+        });
+
+        it('should include detail for wasted clicks in FEED_EVENT', async () => {
+            chrome.runtime.sendMessage.mockClear();
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 10, y: 10,
+                    classification: 'wasted', classificationReason: 'disabled element',
+                    target: { tagName: 'BUTTON', id: '', innerText: 'Submit', rect: { width: 80, height: 32 } }
+                }
+            });
+
+            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
+                (call: any[]) => call[0]?.type === 'FEED_EVENT'
+            );
+            expect(feedCalls.length).toBeGreaterThanOrEqual(1);
+            const feedEvent = feedCalls[feedCalls.length - 1][0].event;
+            expect(feedEvent.detail).toContain('wasted');
         });
 
         it('should not compute Fitts ID for first click', async () => {
@@ -349,6 +404,29 @@ describe('worker.ts', () => {
             expect(sd.page_scroll_px).toBe(1200);
             expect(sd.heaviest_container).toBe('sidebar');
             expect(stats.scroll).toBe(1500);
+        });
+    });
+
+    describe('handleEvent — scroll FEED_EVENT throttling', () => {
+        beforeEach(async () => { await sendMessage({ type: 'START_RECORDING' }); });
+
+        it('should broadcast FEED_EVENT for scroll updates', async () => {
+            chrome.runtime.sendMessage.mockClear();
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'scroll_update', total_px: 500, page_scroll_px: 500,
+                    container_scroll_px: 0, scroll_events: 5
+                }
+            });
+
+            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
+                (call: any[]) => call[0]?.type === 'FEED_EVENT'
+            );
+            expect(feedCalls.length).toBeGreaterThanOrEqual(1);
+            const feedEvent = feedCalls[0][0].event;
+            expect(feedEvent.type).toBe('scroll');
+            expect(feedEvent.label).toContain('SCROLL');
         });
     });
 
@@ -417,6 +495,258 @@ describe('worker.ts', () => {
             const id = recordingState.currentRecording.metrics.information_density;
             expect(id.average_content_ratio).toBe(0.65);
             expect(id.min_content_context).toBe('settings page');
+        });
+    });
+
+    describe('handleEvent — click classification', () => {
+        beforeEach(async () => { await sendMessage({ type: 'START_RECORDING' }); });
+
+        it('should count productive clicks', async () => {
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 10, y: 10,
+                    classification: 'productive',
+                    target: { tagName: 'BUTTON', id: 'ok', innerText: 'OK', rect: { width: 80, height: 32 } }
+                }
+            });
+
+            const { recordingState } = await chrome.storage.local.get('recordingState');
+            const cc = recordingState.currentRecording.metrics.click_count;
+            expect(cc.total).toBe(1);
+            expect(cc.productive).toBe(1);
+            expect(cc.wasted).toBe(0);
+            expect(cc.ceremonial).toBe(0);
+        });
+
+        it('should count wasted clicks and record details', async () => {
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 10, y: 10,
+                    classification: 'wasted', classificationReason: 'disabled element',
+                    target: { tagName: 'BUTTON', id: 'submit', innerText: 'Submit', rect: { width: 80, height: 32 } }
+                }
+            });
+
+            const { recordingState } = await chrome.storage.local.get('recordingState');
+            const cc = recordingState.currentRecording.metrics.click_count;
+            expect(cc.wasted).toBe(1);
+            expect(cc.wasted_details).toHaveLength(1);
+            expect(cc.wasted_details[0].element).toBe('BUTTON#submit');
+            expect(cc.wasted_details[0].reason).toBe('disabled element');
+        });
+
+        it('should count ceremonial clicks and record details', async () => {
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 10, y: 10,
+                    classification: 'ceremonial', classificationReason: 'consent/cookie banner',
+                    target: { tagName: 'BUTTON', id: '', innerText: 'Accept', rect: { width: 80, height: 32 } }
+                }
+            });
+
+            const { recordingState } = await chrome.storage.local.get('recordingState');
+            const cc = recordingState.currentRecording.metrics.click_count;
+            expect(cc.ceremonial).toBe(1);
+            expect(cc.ceremonial_details).toHaveLength(1);
+            expect(cc.ceremonial_details[0].reason).toBe('consent/cookie banner');
+        });
+    });
+
+    describe('handleEvent — idle gap detection', () => {
+        beforeEach(async () => { await sendMessage({ type: 'START_RECORDING' }); });
+
+        it('should detect idle gap when >3s passes between user actions', async () => {
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 10, y: 10,
+                    target: { tagName: 'BUTTON', id: '', innerText: 'First', rect: { width: 80, height: 32 } }
+                }
+            });
+
+            // Advance time beyond the 3s idle threshold
+            vi.advanceTimersByTime(5000);
+
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 20, y: 20,
+                    target: { tagName: 'BUTTON', id: '', innerText: 'Second', rect: { width: 80, height: 32 } }
+                }
+            });
+
+            const { recordingState } = await chrome.storage.local.get('recordingState');
+            const gaps = recordingState.currentRecording.metrics.time_on_task.idle_gaps;
+            expect(gaps.length).toBeGreaterThanOrEqual(1);
+            expect(gaps[0].gap_ms).toBeGreaterThanOrEqual(4500);
+        });
+
+        it('should NOT detect idle gap for passive sensor events (density, depth, wait)', async () => {
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 10, y: 10,
+                    target: { tagName: 'BUTTON', id: '', innerText: 'A', rect: { width: 80, height: 32 } }
+                }
+            });
+
+            // Advance time beyond idle threshold
+            vi.advanceTimersByTime(5000);
+
+            // Send passive sensor events — these should NOT create idle gaps
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'density_update', information_density: {
+                    average_content_ratio: 0.7, min_content_ratio: 0.5, max_content_ratio: 0.9
+                }}
+            });
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'depth_update', navigation_depth: {
+                    max_depth: 2, total_depth_changes: 1, depth_path: [{ direction: 'open', layer: 'modal' }]
+                }}
+            });
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'wait_update', application_wait_ms: 500 }
+            });
+
+            const { recordingState } = await chrome.storage.local.get('recordingState');
+            const gaps = recordingState.currentRecording.metrics.time_on_task.idle_gaps;
+            expect(gaps).toHaveLength(0);
+        });
+    });
+
+    describe('handleEvent — passive processor change detection', () => {
+        beforeEach(async () => { await sendMessage({ type: 'START_RECORDING' }); });
+
+        it('should NOT broadcast FEED_EVENT when depth_update has unchanged values', async () => {
+            // First update — will cause a broadcast
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'depth_update', navigation_depth: {
+                    max_depth: 2, total_depth_changes: 1, depth_path: [{ direction: 'open', layer: 'modal' }]
+                }}
+            });
+            chrome.runtime.sendMessage.mockClear();
+
+            // Same values — should NOT broadcast
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'depth_update', navigation_depth: {
+                    max_depth: 2, total_depth_changes: 1, depth_path: [{ direction: 'open', layer: 'modal' }]
+                }}
+            });
+
+            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
+                (call: any[]) => call[0]?.type === 'FEED_EVENT'
+            );
+            expect(feedCalls).toHaveLength(0);
+        });
+
+        it('should NOT broadcast FEED_EVENT when density_update has unchanged ratio', async () => {
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'density_update', information_density: {
+                    average_content_ratio: 0.65, min_content_ratio: 0.3, max_content_ratio: 0.9
+                }}
+            });
+            chrome.runtime.sendMessage.mockClear();
+
+            // Same average_content_ratio — should NOT broadcast
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'density_update', information_density: {
+                    average_content_ratio: 0.65, min_content_ratio: 0.3, max_content_ratio: 0.9
+                }}
+            });
+
+            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
+                (call: any[]) => call[0]?.type === 'FEED_EVENT'
+            );
+            expect(feedCalls).toHaveLength(0);
+        });
+
+        it('should NOT broadcast FEED_EVENT when wait_update has unchanged value', async () => {
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'wait_update', application_wait_ms: 1500 }
+            });
+            chrome.runtime.sendMessage.mockClear();
+
+            // Same wait value — should NOT broadcast
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'wait_update', application_wait_ms: 1500 }
+            });
+
+            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
+                (call: any[]) => call[0]?.type === 'FEED_EVENT'
+            );
+            expect(feedCalls).toHaveLength(0);
+        });
+
+        it('should broadcast FEED_EVENT when depth_update has new values', async () => {
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'depth_update', navigation_depth: {
+                    max_depth: 2, total_depth_changes: 1, depth_path: [{ direction: 'open', layer: 'modal' }]
+                }}
+            });
+            chrome.runtime.sendMessage.mockClear();
+
+            // Changed values — should broadcast
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'depth_update', navigation_depth: {
+                    max_depth: 3, total_depth_changes: 2, depth_path: [{ direction: 'open', layer: 'modal' }, { direction: 'open', layer: 'dropdown' }]
+                }}
+            });
+
+            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
+                (call: any[]) => call[0]?.type === 'FEED_EVENT'
+            );
+            expect(feedCalls.length).toBeGreaterThanOrEqual(1);
+        });
+    });
+
+    describe('stopRecording — idle/active time derivation', () => {
+        it('should compute idle_ms and active_ms from idle gaps', async () => {
+            await sendMessage({ type: 'START_RECORDING' });
+
+            // Simulate a click, wait >3s, then another click to create an idle gap
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 10, y: 10,
+                    target: { tagName: 'BUTTON', id: '', innerText: 'A', rect: { width: 80, height: 32 } }
+                }
+            });
+
+            vi.advanceTimersByTime(5000);
+
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 20, y: 20,
+                    target: { tagName: 'BUTTON', id: '', innerText: 'B', rect: { width: 80, height: 32 } }
+                }
+            });
+
+            vi.advanceTimersByTime(1000);
+            await sendMessage({ type: 'STOP_RECORDING' });
+
+            const { benchmarkReport } = await chrome.storage.local.get('benchmarkReport');
+            expect(benchmarkReport).toBeDefined();
+            const tot = benchmarkReport.metrics.time_on_task;
+            expect(tot.idle_ms).toBeGreaterThan(0);
+            expect(tot.active_ms).toBeDefined();
+            expect(tot.active_ms).toBeLessThan(tot.total_ms);
+            expect(tot.longest_idle_ms).toBeGreaterThan(0);
+            expect(tot.longest_idle_after).toBeDefined();
         });
     });
 

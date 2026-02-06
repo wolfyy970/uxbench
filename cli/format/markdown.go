@@ -35,20 +35,23 @@ func GenerateMarkdownTable(reports []*schema.BenchmarkReport) string {
 	}
 	sb.WriteString("\n")
 
-	// Helper for Metrics
-	addMetricRow := func(label string, valFn func(schema.BenchmarkMetrics) float64, higherIsBetter bool) {
-		sb.WriteString(fmt.Sprintf("| %s |", label))
-		
+	// Metric rows from shared registry (core metrics only)
+	for _, def := range MetricRegistry {
+		if def.DetailOnly {
+			continue
+		}
+		sb.WriteString(fmt.Sprintf("| %s |", def.Label))
+
 		// Find best value
 		bestVal := -1.0
 		first := true
 		for _, r := range reports {
-			val := valFn(r.Metrics)
+			val := def.Extractor(r.Metrics)
 			if first {
 				bestVal = val
 				first = false
 			} else {
-				if higherIsBetter {
+				if def.HigherIsBetter {
 					if val > bestVal { bestVal = val }
 				} else {
 					if val < bestVal { bestVal = val }
@@ -57,7 +60,7 @@ func GenerateMarkdownTable(reports []*schema.BenchmarkReport) string {
 		}
 
 		for _, r := range reports {
-			val := valFn(r.Metrics)
+			val := def.Extractor(r.Metrics)
 			valStr := fmt.Sprintf("%.2f", val)
 			if val == bestVal {
 				valStr = "**" + valStr + "**" // Bold winner
@@ -66,15 +69,6 @@ func GenerateMarkdownTable(reports []*schema.BenchmarkReport) string {
 		}
 		sb.WriteString("\n")
 	}
-
-	addMetricRow("Composite Score", func(m schema.BenchmarkMetrics) float64 { return m.CompositeScore }, true)
-	addMetricRow("Total Clicks", func(m schema.BenchmarkMetrics) float64 { return float64(m.ClickCount.Total) }, false)
-	addMetricRow("Time on Task (ms)", func(m schema.BenchmarkMetrics) float64 { return float64(m.TimeOnTask.TotalMS) }, false)
-	addMetricRow("Fitts Avg ID", func(m schema.BenchmarkMetrics) float64 { return m.Fitts.AverageID }, false)
-	addMetricRow("Info Density", func(m schema.BenchmarkMetrics) float64 { return m.InformationDensity.AverageContentRatio }, true)
-	addMetricRow("Context Switches", func(m schema.BenchmarkMetrics) float64 { return float64(m.ContextSwitches.Total) }, false)
-	addMetricRow("Shortcut Ratio", func(m schema.BenchmarkMetrics) float64 { return m.ShortcutCoverage.Ratio }, true)
-	addMetricRow("Nav Depth", func(m schema.BenchmarkMetrics) float64 { return float64(m.NavigationDepth.MaxDepth) }, false)
 
 	return sb.String()
 }

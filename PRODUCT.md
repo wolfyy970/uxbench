@@ -1,7 +1,7 @@
 # UX Bench — Product Specification
 
-**Version:** 0.4 — Full Metric Coverage
-**Date:** February 5, 2026
+**Version:** 0.5 — Quality & Correctness
+**Date:** February 6, 2026
 **Status:** In Progress
 
 ---
@@ -39,10 +39,29 @@ Every design decision in the Analyzer follows from one principle: **the readout 
 1.  Open Side Panel.
 2.  Select **Viewport Size** (e.g., 1280x800).
 3.  Click **START** (or press `Ctrl+Shift+R`).
-4.  Perform task (observe Live Telemetry).
+4.  Perform task — observe **Live Telemetry** (10 metrics + Interaction Cost) updating in real-time.
 5.  Click **STOP**.
 6.  (Optional) Repeat test for averaging.
 7.  Click **DOWNLOAD**.
+
+### 3.1.1 Live Telemetry (Side Panel)
+The side panel is designed for **peripheral-vision monitoring** — the researcher watches the participant, not the panel. All 10 metrics plus composite are displayed live via event-driven updates from the worker:
+
+| Metric | Purpose |
+|--------|---------|
+| **CLICKS** | Total click count (productive, ceremonial, wasted) |
+| **DEPTH** | UI layer depth — modals, drawers, sub-menus |
+| **SCROLL** | Scroll distance in pixels |
+| **FITTS** | Fitts Index of Difficulty — effort to reach targets |
+| **SWITCHES** | Mouse/keyboard context switches |
+| **DENSITY** | Information density — content area vs. viewport |
+| **SHORTCUTS** | Modifier-key combos used (Ctrl/Cmd/Alt + key) |
+| **TYPING** | Free-text vs. constrained input ratio |
+| **SCAN** | Avg scanning distance between click targets |
+| **WAIT** | Application wait/response time |
+| **COST** | Composite interaction cost score |
+
+Hover any metric label for a tooltip explaining what it measures. An **Activity Feed** timeline shows every captured event in real time, providing a detailed chronological record of the session.
 
 ### 3.2 Metrics Captured
 The Recorder captures 10 core efficiency metrics plus human signals. 
@@ -55,7 +74,7 @@ The Recorder captures 10 core efficiency metrics plus human signals.
 3.  **Fitts's Law**: Index of Difficulty (Targeting effort).
 4.  **Information Density**: Content vs Viewport area.
 5.  **Context Switches**: Mouse/Keyboard transitions.
-6.  **Shortcut Coverage**: Usage vs Opportunity.
+6.  **Shortcut Usage**: Modifier-key combos (keyboard proficiency).
 7.  **Typing Ratio**: Free-text vs Constrained input.
 8.  **Navigation Depth**: Max UI layer depth.
 9.  **Scanning Distance**: Visual attention travel.
@@ -121,10 +140,15 @@ Launched by default when running `compare` or `inspect` interactively.
 
 ### Completed
 -   Schema, Recorder, CLI foundations.
--   All 10 metrics captured in Recorder (5 content-script collectors).
+-   All 10 metrics captured in Recorder (6 content-script collectors including WaitCollector).
 -   Multi-run averaging across all metric groups.
--   Vitest test suite (worker + all 5 collectors).
+-   Vitest test suite (worker + all 6 collectors).
 -   Summary TUI, Fitts drill-down, Radar view.
+-   Welford directional Fitts's Law (approach-angle-aware target width).
+-   Semantic density weighting (content type determines information load).
+-   Application wait time detection (spinners, skeletons, progress bars).
+-   Event queue serialization (prevents race conditions in rapid event handling).
+-   Event-driven side panel with activity feed timeline (all 10 metrics live, idle gap detection).
 
 ### Remaining
 -   Human Signals (hesitation, decision time).

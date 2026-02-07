@@ -104,6 +104,70 @@ describe('ClickCollector', () => {
         collector.detach();
     });
 
+    it('should resolve click target to nearest interactive ancestor', () => {
+        collector.attach();
+
+        // Create a button with a child span (icon-in-button pattern)
+        const btn = document.createElement('button');
+        btn.id = 'action-btn';
+        const icon = document.createElement('span');
+        icon.textContent = 'icon';
+        btn.appendChild(icon);
+        document.body.appendChild(btn);
+
+        // Click on the inner span — should resolve to the button
+        icon.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        const call = chrome.runtime.sendMessage.mock.calls[0][0];
+        expect(call.payload.target.tagName).toBe('BUTTON');
+        expect(call.payload.target.id).toBe('action-btn');
+
+        document.body.removeChild(btn);
+        collector.detach();
+    });
+
+    it('should detect disabled ancestor for wasted click classification', () => {
+        collector.attach();
+
+        // Create a disabled button with a child span
+        const btn = document.createElement('button');
+        btn.setAttribute('disabled', '');
+        const span = document.createElement('span');
+        span.textContent = 'Submit';
+        btn.appendChild(span);
+        document.body.appendChild(btn);
+
+        // Click on the inner span — should detect disabled ancestor
+        span.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        const call = chrome.runtime.sendMessage.mock.calls[0][0];
+        expect(call.payload.classification).toBe('wasted');
+        expect(call.payload.classificationReason).toBe('disabled element');
+
+        document.body.removeChild(btn);
+        collector.detach();
+    });
+
+    it('should classify aria-disabled ancestor clicks as wasted', () => {
+        collector.attach();
+
+        const div = document.createElement('div');
+        div.setAttribute('aria-disabled', 'true');
+        div.setAttribute('role', 'button');
+        const inner = document.createElement('span');
+        inner.textContent = 'Go';
+        div.appendChild(inner);
+        document.body.appendChild(div);
+
+        inner.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        const call = chrome.runtime.sendMessage.mock.calls[0][0];
+        expect(call.payload.classification).toBe('wasted');
+
+        document.body.removeChild(div);
+        collector.detach();
+    });
+
     it('should truncate innerText to 50 characters', () => {
         collector.attach();
 

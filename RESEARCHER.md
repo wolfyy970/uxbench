@@ -18,7 +18,7 @@ Unlike usability testing (which captures *why* users struggle via think-aloud) o
 We model "Work" in three dimensions:
 1.  **Motor Load:** Physical effort (clicks, mouse travel, typing).
 2.  **Cognitive Load:** Mental effort (decision time, visual scanning, memory load).
-3.  **Flow:** Workflow continuity (interruptions, waiting, navigation depth).
+3.  **Flow:** Workflow continuity (interruptions, idle gaps).
 
 **Methodology:** The data is collected via **passive DOM observation**. We do not rely on self-reporting. We measure the millisecond-precision timing and pixel-perfect geometry covering the user's session.
 
@@ -50,11 +50,21 @@ ID = log₂(D / W_eff + 1)
 **The Concept:** Total click count is a blunt instrument. We separate clicks by *intent*.
 **Categories:**
 *   **Productive:** Advances the task (e.g., filling a form, clicking 'Next').
-*   **Ceremonial:** Interface overhead (e.g., closing popups, dismissing cookie banners). Detection uses narrowed selectors targeting cookie/consent/GDPR/privacy patterns to avoid false positives on legitimate UI elements.
-*   **Wasted:** Clicks that produced no change (e.g., rage clicks, clicking disabled buttons). Double-click detection excludes editable elements (text inputs, contentEditable) where double-click is intentional (word selection).
+*   **Ceremonial:** Interface overhead that doesn't advance the task. Detection is intentionally narrow — only clicks inside elements matching cookie/consent/GDPR/privacy selector patterns (class, id, data-testid). No text-matching heuristics, which would false-positive on legitimate application dialogs.
+*   **Wasted:** Clicks on disabled elements (`disabled` attribute or `aria-disabled="true"`). No timing-based heuristics — double-clicks and rapid clicks are legitimate interaction patterns.
 **Interpretation:** A reduction in *Ceremonial* clicks (removing friction) is often more valuable than a reduction in *Productive* clicks (simplifying the task), as ceremonial clicks feel like "chores" to the user.
 
-### 2.3 Typing vs. Constrained Input
+### 2.3 Mouse Travel (Cursor Distance)
+**The Concept:** Fitts's Law and Scanning Distance only measure straight-line distances between click points. They don't capture the *actual path* the cursor took — all the overshooting, hunting, exploring, and correcting that happens between clicks.
+**Methodology:** A `MouseTravelCollector` tracks cumulative cursor distance via a `mousemove` listener, batched through `requestAnimationFrame` for performance. Travel is segmented into **productive** (ended with a click) and **idle** (cursor movement that didn't result in a click — hunting, exploring, overshooting). The worker computes a **path efficiency** ratio: `scanning_distance / actual_travel`. A ratio near 1.0 means the user moved in efficient straight lines; lower values indicate wasted movement.
+**Interpretation:**
+*   **High idle travel:** The user is searching the interface — poor discoverability or misleading affordances.
+*   **Low path efficiency (< 0.5):** Significant motor waste. The layout may be forcing circuitous navigation or elements look clickable but aren't.
+*   **Insight:** Unlike Fitts (which measures targeting *difficulty*), Mouse Travel measures raw motor *cost*. An interface can have low Fitts IDs (easy targets) but high travel (targets are scattered).
+
+*Note: Mouse Travel is not included in the Composite Score to avoid double-counting with Fitts ID and Scroll Distance. It stands as an independent motor load signal.*
+
+### 2.4 Typing vs. Constrained Input
 **The Concept:** Typing is error-prone and slow compared to selection (Hick's Law notwithstanding).
 **Interpretation:** A standard High-Efficiency target is **< 30% typing**. If your ratio is higher, look for opportunities to replace free-text fields with smart defaults, autocomplete, or segmented controls.
 
@@ -63,63 +73,32 @@ ID = log₂(D / W_eff + 1)
 ## 3. Cognitive Load Metrics
 *Quantifying the mental cost of processing the interface.*
 
-### 3.1 Information Density
-**The Concept:** Visual clutter increases search time. We measure the ratio of "content pixels" (text, images, controls) to total viewport area.
-**Methodology:** We use **semantic weighting** rather than raw pixel coverage. Not all visible elements contribute equally to information load:
-*   **Weight 1.0:** Primary content — text (p, h1–h6, li, td, th, label, span with text).
-*   **Weight 0.7–0.8:** Interactive elements — inputs, selects, buttons, tables.
-*   **Weight 0.5:** Media — images, links.
-*   **Weight 0.3:** Decorative — SVGs, generic containers.
-
-Density is sampled at interaction time (each click) and during scroll events (throttled to one sample per 2 seconds), then averaged across all samples.
-
-**Interpretation:**
-*   **< 15% (Sparse):** Good for focus, but requires more scrolling/navigation to see data.
-*   **15%–50% (Balanced):** Optimal for most enterprise applications.
-*   **> 50% (Dense):** High cognitive load. Users will struggle to scan and find information ("haystack" effect).
-
-### 3.2 Visual Scanning Distance
+### 3.1 Visual Scanning Distance
 **The Concept:** How far does the user's eye travel between actions? If a user edits a field on the left, then has to check a value on the right, then click 'Save' at the bottom, their attention is ping-ponging across the screen.
 **Methodology:** We calculate the Euclidean distance between consecutive interaction points.
 **Interpretation:** High scanning distance correlates with fatigue and missed information. Grouping related controls (Theory of Proximity) directly reduces this metric.
 
-### 3.3 Context Switches
+### 3.2 Context Switches
 **The Concept:** Switching between Mouse and Keyboard breaks flow. It requires a physical posture change and a mental mode shift.
 **Methodology:** We track contiguous input "streaks" (consecutive mouse or keyboard actions). A context switch is recorded when the input modality changes. The longest keyboard and mouse streaks are preserved as indicators of flow continuity — long streaks mean the user stayed in one mode, which is good. Streaks are finalized at recording stop to avoid losing the final in-progress streak.
 **Interpretation:** High switch counts indicate a disjointed UI.
 *   *Bad:* Type Name -> Click Tab -> Type Address -> Click Tab. (high friction)
 *   *Good:* Type Name -> Tab key -> Type Address. (low friction)
 
+### 3.3 Scroll Distance
+**The Concept:** Scroll distance quantifies the raw navigation effort required to find content. High scroll distances suggest content hierarchy or layout issues — the user is hunting for information.
+**Methodology:** We track absolute scroll delta (both vertical and horizontal) at page level and inside scrollable containers, batched through `requestAnimationFrame`. Container scrolling is tracked separately from page scrolling. Each container's initial `scrollTop`/`scrollLeft` is recorded as a baseline on first encounter to avoid counting pre-existing scroll positions as user-initiated distance. The heaviest scrollable container is identified for diagnostic purposes.
+**Interpretation:**
+*   **High page scroll:** Long pages or poor content hierarchy.
+*   **High container scroll:** Overflow-heavy UI (e.g., cramped data tables).
+*   **Insight:** Scroll distance is included in the Composite Score (weight 0.005/px) — cumulative over long sessions it becomes a meaningful indicator of layout efficiency.
+
 ---
 
 ## 4. Flow & Continuity
 *Quantifying the integrity of the user's journey.*
 
-### 4.1 Navigation Depth
-**The Concept:** How many "layers" deep is the user? (e.g., Page > Modal > Popover > Tooltip).
-**Methodology:** A MutationObserver monitors the DOM for UI layer changes. Detected layer types include:
-*   **Standards-based:** `dialog[open]`, `[role="dialog"]`, `[role="alertdialog"]`, `[role="menu"]`, `[role="listbox"]`, `[aria-modal="true"]`, `[popover]:popover-open`, `details[open]`.
-*   **Framework patterns:** `.modal`, `.popover`, `.popup`, `.dropdown-menu`, `.overlay`, `.lightbox`, `[data-modal]`, `[data-popup]`.
-*   **Transient UI:** `[class*="toast"]`, `[class*="snackbar"]`, `[role="status"]` toast variants.
-
-Only visible layers (non-hidden, non-zero opacity, non-zero width) are counted. The depth path records up to the last 50 open/close transitions.
-
-**Interpretation:**
-*   **Depth 1-2:** ideal. The user feels grounded.
-*   **Depth 3+:** "Lost in navigation." Users lose context of the background task. Closing the top layer often results in a momentary "where was I?" disorientation.
-
-### 4.2 Application Wait Time
-**The Concept:** Time the user spends waiting for the system (spinners, skeleton screens), distinct from time they spend thinking.
-**Methodology:** A dedicated `WaitCollector` uses a MutationObserver plus a 500ms periodic check to detect visible loading indicators in the DOM. Detected patterns include:
-*   `[class*="spinner"]`, `[class*="loading"]`, `[class*="skeleton"]`, `[class*="loader"]`
-*   `[class*="progress"]`, `[role="progressbar"]`, `[aria-busy="true"]`
-*   `.shimmer`, `[class*="placeholder"]`
-
-Only elements that are visible (non-hidden, non-zero opacity, non-zero width) trigger wait timing. The collector measures cumulative milliseconds the user spent looking at loading states.
-
-**Interpretation:** This is pure waste. It is the single highest-weighted penalty in our Interaction Cost model.
-
-### 4.3 Decision Time vs. Idle Gaps
+### 4.1 Decision Time vs. Idle Gaps
 **The Concept:** We measure the idle time *between* actions.
 *   **< 500ms:** Flow state. The user knows exactly what to do next.
 *   **> 3s (Idle Gap):** The user has paused — they may be thinking, reading, or searching.
@@ -136,8 +115,6 @@ We penalize metrics based on their estimated impact on user fatigue (derived fro
 
 | Factor | Weight | Rationale |
 |---|---|---|
-| **Wait Time** | 1.0x (sec) | Waiting breaks flow entirely. Heaviest penalty. |
-| **Nav Depth** | 2.0x (layer) | Cognitive stack depth is mentally expensive to maintain. |
 | **Switches** | 1.5x (event) | Physical mode switching breaks momentum. |
 | **Fitts ID** | 1.0x (bits) | High precision requires muscular tension. |
 | **Scrolling** | 0.005x (px) | Low cost, but cumulative over long sessions. |

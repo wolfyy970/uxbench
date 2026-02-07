@@ -20,7 +20,7 @@ export class ScrollCollector {
     private scrollEvents = 0;
     private containerScrollMap: Map<EventTarget, { label: string; px: number }> = new Map();
 
-    // Callback for cross-collector coordination (density sampling on scroll)
+    // Callback for cross-collector coordination
     onScrollCaptured: (() => void) | null = null;
 
     attach() {
@@ -83,8 +83,18 @@ export class ScrollCollector {
         const el = target as HTMLElement;
         const currentY = el.scrollTop;
         const currentX = el.scrollLeft;
-        const lastY = this.lastContainerY.get(target) || 0;
-        const lastX = this.lastContainerX.get(target) || 0;
+
+        // First time we see this container: record its current position as baseline.
+        // Without this, a container already scrolled to e.g. scrollTop=500 would
+        // falsely count that 500px as user-initiated scroll distance.
+        if (!this.lastContainerY.has(target)) {
+            this.lastContainerY.set(target, currentY);
+            this.lastContainerX.set(target, currentX);
+            return;
+        }
+
+        const lastY = this.lastContainerY.get(target)!;
+        const lastX = this.lastContainerX.get(target)!;
         const deltaY = Math.abs(currentY - lastY);
         const deltaX = Math.abs(currentX - lastX);
         const delta = deltaY + deltaX;

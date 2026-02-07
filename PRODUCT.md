@@ -10,7 +10,7 @@
 
 UX Bench is two tools in one repository that together measure and compare the interaction efficiency of web applications.
 
-**The Recorder** is a Chrome extension. A human user activates it, performs a task naturally on any web application, and stops it. The extension captures every interaction event and produces a JSON benchmark report with 10 quantitative efficiency metrics.
+**The Recorder** is a Chrome extension. A human user activates it, performs a task naturally on any web application, and stops it. The extension captures every interaction event and produces a JSON benchmark report with 9 core efficiency metrics.
 
 **The Analyzer** is a Go CLI with an interactive terminal UI built on Charm's Bubble Tea. It ingests benchmark JSON files and presents head-to-head comparison in the terminal.
 
@@ -36,49 +36,48 @@ Every design decision in the Analyzer follows from one principle: **the readout 
 ## 3. The Recorder (Chrome Extension)
 
 ### 3.1 User Flow
-1.  Open Side Panel.
-2.  Select **Viewport Size** (e.g., 1280x800).
-3.  Click **START** (or press `Ctrl+Shift+R`).
-4.  Perform task — observe **Live Telemetry** (10 metrics + Interaction Cost) updating in real-time.
-5.  Click **STOP**.
-6.  (Optional) Repeat test for averaging.
-7.  Click **DOWNLOAD**.
+1.  Open Side Panel (auto-selects Tablet viewport — ready to record immediately).
+2.  (Optional) Change **Viewport Size** via dropdown.
+3.  Click **Start ⌘⇧R** (or press `Ctrl+Shift+R` / `Cmd+Shift+R`).
+4.  Perform task — observe **Live Telemetry** updating in real-time.
+5.  Click **Stop**.
+6.  (Optional) Repeat for multi-run averaging.
+7.  Click **Download** — native save dialog lets you name the file.
 
 ### 3.1.1 Live Telemetry (Side Panel)
-The side panel is designed for **peripheral-vision monitoring** — the researcher watches the participant, not the panel. All 10 metrics plus composite are displayed live via event-driven updates from the worker:
+The side panel is designed for **peripheral-vision monitoring** — the researcher watches the participant, not the panel. All 9 metrics plus composite are displayed live via event-driven updates from the worker, organized by category:
 
-| Metric | Purpose |
-|--------|---------|
-| **CLICKS** | Total click count (productive, ceremonial, wasted) |
-| **DEPTH** | UI layer depth — modals, drawers, sub-menus |
-| **SCROLL** | Scroll distance in pixels |
-| **FITTS** | Fitts Index of Difficulty — effort to reach targets |
-| **SWITCHES** | Mouse/keyboard context switches |
-| **DENSITY** | Information density — content area vs. viewport |
-| **SHORTCUTS** | Modifier-key combos used (Ctrl/Cmd/Alt + key) |
-| **TYPING** | Free-text vs. constrained input ratio |
-| **SCAN** | Avg scanning distance between click targets |
-| **WAIT** | Application wait/response time |
-| **COST** | Composite interaction cost score |
+| Group | Metric | Purpose |
+|-------|--------|---------|
+| Temporal | **Time** | Elapsed time since recording started |
+| | **Idle Gaps** | Pauses > 3s — user may be thinking or confused |
+| Click & Targeting | **Clicks** | Total click count (productive, ceremonial, wasted) |
+| | **Target Effort** | Fitts' Law Index of Difficulty — effort to reach targets |
+| Movement | **Cursor** | Total cursor travel distance — raw motor cost |
+| | **Eye Travel** | Avg scanning distance between click targets |
+| Navigation | **Scroll** | Scroll distance in pixels |
+| | **Switches** | Mouse/keyboard context switches |
+| Input | **Shortcuts** | Modifier-key combos used (Ctrl/Cmd/Alt + key) |
+| | **Typing** | Free-text vs. constrained input ratio |
+| Summary | **Cost** | Composite interaction cost score |
 
-Hover any metric label for a tooltip explaining what it measures. An **Activity Feed** timeline shows every captured event in real time, providing a detailed chronological record of the session.
+Hover any metric label for a tooltip explaining what it measures. An **Activity Feed** timeline shows every captured event in real time, with a prominent **null state** showing the current run number and explaining the multi-run averaging workflow.
 
 ### 3.2 Metrics Captured
-The Recorder captures 10 core efficiency metrics plus human signals. 
+The Recorder captures 9 core efficiency metrics plus human signals. 
 
 > **Detailed Metric Definitions**: See [RESEARCHER.md](./RESEARCHER.md) for the complete scientific breakdown of how these are measured and calculated.
 
 **Core Metrics:**
 1.  **Click Count**: Total, Productive, Ceremonial, Wasted.
-2.  **Time on Task**: Active vs Idle, Application Wait.
+2.  **Time on Task**: Active vs Idle.
 3.  **Fitts's Law**: Index of Difficulty (Targeting effort).
-4.  **Information Density**: Content vs Viewport area.
-5.  **Context Switches**: Mouse/Keyboard transitions.
-6.  **Shortcut Usage**: Modifier-key combos (keyboard proficiency).
-7.  **Typing Ratio**: Free-text vs Constrained input.
-8.  **Navigation Depth**: Max UI layer depth.
-9.  **Scanning Distance**: Visual attention travel.
-10. **Scroll Distance**: Physical navigation effort.
+4.  **Context Switches**: Mouse/Keyboard transitions.
+5.  **Shortcut Usage**: Modifier-key combos (keyboard proficiency).
+6.  **Typing Ratio**: Free-text vs Constrained input.
+7.  **Scanning Distance**: Visual attention travel.
+8.  **Scroll Distance**: Physical navigation effort.
+9.  **Mouse Travel**: Total cursor distance (raw motor cost, path efficiency).
 
 **Composite Score:**
 A weighted interaction cost formula derived from the above.
@@ -140,15 +139,17 @@ Launched by default when running `compare` or `inspect` interactively.
 
 ### Completed
 -   Schema, Recorder, CLI foundations.
--   All 10 metrics captured in Recorder (6 content-script collectors including WaitCollector).
+-   All 9 metrics captured in Recorder (4 content-script collectors).
 -   Multi-run averaging across all metric groups.
--   Vitest test suite (worker + all 6 collectors).
+-   Vitest test suite (worker + 4 collectors, 72 tests).
 -   Summary TUI, Fitts drill-down, Radar view.
 -   Welford directional Fitts's Law (approach-angle-aware target width).
--   Semantic density weighting (content type determines information load).
--   Application wait time detection (spinners, skeletons, progress bars).
+-   Mouse travel tracking with idle/productive segmentation and path efficiency.
 -   Event queue serialization (prevents race conditions in rapid event handling).
--   Event-driven side panel with activity feed timeline (all 10 metrics live, idle gap detection).
+-   Event-driven side panel with activity feed timeline (all 9 metrics live, idle gap detection).
+-   Cohesive design system (alpha scale, brand orange accent, semantic tokens).
+-   Native save dialog for downloads (`chrome.downloads` API).
+-   Programmatic content script injection (covers pre-existing tabs).
 
 ### Remaining
 -   Human Signals (hesitation, decision time).

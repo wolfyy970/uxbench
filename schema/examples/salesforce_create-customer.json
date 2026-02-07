@@ -48,11 +48,8 @@
             "total_ms": 45000,
             "active_ms": 30000,
             "idle_ms": 10000,
-            "application_wait_ms": 5000,
             "longest_idle_ms": 3500,
             "longest_idle_after": "Opened New Contact Form",
-            "longest_wait_ms": 2000,
-            "longest_wait_trigger": "Clicked Save",
             "idle_gaps": [
                 {
                     "gap_ms": 3500,
@@ -97,14 +94,6 @@
             "average_path_efficiency": 0.85,
             "total_overshoots": 2
         },
-        "information_density": {
-            "method": "dom-coverage",
-            "average_content_ratio": 0.45,
-            "min_content_ratio": 0.30,
-            "max_content_ratio": 0.60,
-            "min_content_context": "Loading Screen",
-            "max_content_context": "Contact List View"
-        },
         "context_switches": {
             "total": 5,
             "ratio": 0.42,
@@ -124,37 +113,6 @@
                 "Last Name",
                 "Email",
                 "Phone"
-            ]
-        },
-        "navigation_depth": {
-            "max_depth": 3,
-            "total_depth_changes": 6,
-            "deepest_moment": "Contact Form > Address Modal > Zip Code Lookup",
-            "depth_path": [
-                {
-                    "direction": "open",
-                    "layer": "Contact Form"
-                },
-                {
-                    "direction": "open",
-                    "layer": "Address Modal"
-                },
-                {
-                    "direction": "open",
-                    "layer": "Zip Code Lookup"
-                },
-                {
-                    "direction": "close",
-                    "layer": "Zip Code Lookup"
-                },
-                {
-                    "direction": "close",
-                    "layer": "Address Modal"
-                },
-                {
-                    "direction": "close",
-                    "layer": "Contact Form"
-                }
             ]
         },
         "scanning_distance": {

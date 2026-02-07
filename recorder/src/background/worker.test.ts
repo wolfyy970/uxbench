@@ -116,11 +116,9 @@ describe('worker.ts', () => {
             expect(m.click_count.total).toBe(0);
             expect(m.time_on_task).toBeDefined();
             expect(m.fitts.formula).toBe('shannon');
-            expect(m.information_density).toBeDefined();
             expect(m.context_switches).toBeDefined();
             expect(m.shortcut_coverage).toBeDefined();
             expect(m.typing_ratio).toBeDefined();
-            expect(m.navigation_depth.max_depth).toBe(1);
             expect(m.scanning_distance).toBeDefined();
             expect(m.scroll_distance).toBeDefined();
             expect(m.composite_score).toBe(0);
@@ -317,16 +315,14 @@ describe('worker.ts', () => {
             expect(stats).toBeDefined();
             expect(stats.clicks).toBe(1);
             // Expanded stats should include all metric fields
-            expect(stats).toHaveProperty('depth');
             expect(stats).toHaveProperty('scroll');
             expect(stats).toHaveProperty('switches');
             expect(stats).toHaveProperty('composite');
             expect(stats).toHaveProperty('fitts');
-            expect(stats).toHaveProperty('density');
             expect(stats).toHaveProperty('shortcuts');
             expect(stats).toHaveProperty('typing');
             expect(stats).toHaveProperty('scanAvg');
-            expect(stats).toHaveProperty('waitMs');
+            expect(stats).toHaveProperty('gaps');
         });
 
         it('should broadcast FEED_EVENT after click event', async () => {
@@ -346,7 +342,7 @@ describe('worker.ts', () => {
             expect(feedCalls.length).toBeGreaterThanOrEqual(1);
             const feedEvent = feedCalls[feedCalls.length - 1][0].event;
             expect(feedEvent.type).toBe('click');
-            expect(feedEvent.label).toContain('CLK');
+            expect(feedEvent.label).toContain('CLICK');
             expect(feedEvent.label).toContain('BUTTON');
             expect(feedEvent.metricUpdates).toBeDefined();
             expect(feedEvent.metricUpdates.clicks).toBeDefined();
@@ -453,51 +449,6 @@ describe('worker.ts', () => {
         });
     });
 
-    describe('handleEvent — depth_update', () => {
-        beforeEach(async () => { await sendMessage({ type: 'START_RECORDING' }); });
-
-        it('should update navigation_depth metrics', async () => {
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: {
-                    type: 'depth_update',
-                    navigation_depth: {
-                        max_depth: 3, total_depth_changes: 4, deepest_moment: 'modal > dropdown',
-                        depth_path: [{ direction: 'open', layer: 'modal' }, { direction: 'open', layer: 'dropdown' }]
-                    }
-                }
-            });
-
-            const { recordingState, stats } = await chrome.storage.local.get(['recordingState', 'stats']);
-            const nd = recordingState.currentRecording.metrics.navigation_depth;
-            expect(nd.max_depth).toBe(3);
-            expect(nd.deepest_moment).toBe('modal > dropdown');
-            expect(stats.depth).toBe(3);
-        });
-    });
-
-    describe('handleEvent — density_update', () => {
-        beforeEach(async () => { await sendMessage({ type: 'START_RECORDING' }); });
-
-        it('should update information_density metrics', async () => {
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: {
-                    type: 'density_update',
-                    information_density: {
-                        average_content_ratio: 0.65, min_content_ratio: 0.3, max_content_ratio: 0.9,
-                        min_content_context: 'settings page', max_content_context: 'data table'
-                    }
-                }
-            });
-
-            const { recordingState } = await chrome.storage.local.get('recordingState');
-            const id = recordingState.currentRecording.metrics.information_density;
-            expect(id.average_content_ratio).toBe(0.65);
-            expect(id.min_content_context).toBe('settings page');
-        });
-    });
-
     describe('handleEvent — click classification', () => {
         beforeEach(async () => { await sendMessage({ type: 'START_RECORDING' }); });
 
@@ -584,7 +535,7 @@ describe('worker.ts', () => {
             expect(gaps[0].gap_ms).toBeGreaterThanOrEqual(4500);
         });
 
-        it('should NOT detect idle gap for passive sensor events (density, depth, wait)', async () => {
+        it('should NOT detect idle gap for passive sensor events (mouse_travel)', async () => {
             await sendMessage({
                 type: 'EVENT_CAPTURED',
                 payload: {
@@ -596,120 +547,15 @@ describe('worker.ts', () => {
             // Advance time beyond idle threshold
             vi.advanceTimersByTime(5000);
 
-            // Send passive sensor events — these should NOT create idle gaps
+            // Send passive sensor event — should NOT create idle gaps
             await sendMessage({
                 type: 'EVENT_CAPTURED',
-                payload: { type: 'density_update', information_density: {
-                    average_content_ratio: 0.7, min_content_ratio: 0.5, max_content_ratio: 0.9
-                }}
-            });
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: { type: 'depth_update', navigation_depth: {
-                    max_depth: 2, total_depth_changes: 1, depth_path: [{ direction: 'open', layer: 'modal' }]
-                }}
-            });
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: { type: 'wait_update', application_wait_ms: 500 }
+                payload: { type: 'mouse_travel_update', total_px: 500, idle_travel_px: 200, move_events: 50, path_efficiency: null }
             });
 
             const { recordingState } = await chrome.storage.local.get('recordingState');
             const gaps = recordingState.currentRecording.metrics.time_on_task.idle_gaps;
             expect(gaps).toHaveLength(0);
-        });
-    });
-
-    describe('handleEvent — passive processor change detection', () => {
-        beforeEach(async () => { await sendMessage({ type: 'START_RECORDING' }); });
-
-        it('should NOT broadcast FEED_EVENT when depth_update has unchanged values', async () => {
-            // First update — will cause a broadcast
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: { type: 'depth_update', navigation_depth: {
-                    max_depth: 2, total_depth_changes: 1, depth_path: [{ direction: 'open', layer: 'modal' }]
-                }}
-            });
-            chrome.runtime.sendMessage.mockClear();
-
-            // Same values — should NOT broadcast
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: { type: 'depth_update', navigation_depth: {
-                    max_depth: 2, total_depth_changes: 1, depth_path: [{ direction: 'open', layer: 'modal' }]
-                }}
-            });
-
-            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
-                (call: any[]) => call[0]?.type === 'FEED_EVENT'
-            );
-            expect(feedCalls).toHaveLength(0);
-        });
-
-        it('should NOT broadcast FEED_EVENT when density_update has unchanged ratio', async () => {
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: { type: 'density_update', information_density: {
-                    average_content_ratio: 0.65, min_content_ratio: 0.3, max_content_ratio: 0.9
-                }}
-            });
-            chrome.runtime.sendMessage.mockClear();
-
-            // Same average_content_ratio — should NOT broadcast
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: { type: 'density_update', information_density: {
-                    average_content_ratio: 0.65, min_content_ratio: 0.3, max_content_ratio: 0.9
-                }}
-            });
-
-            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
-                (call: any[]) => call[0]?.type === 'FEED_EVENT'
-            );
-            expect(feedCalls).toHaveLength(0);
-        });
-
-        it('should NOT broadcast FEED_EVENT when wait_update has unchanged value', async () => {
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: { type: 'wait_update', application_wait_ms: 1500 }
-            });
-            chrome.runtime.sendMessage.mockClear();
-
-            // Same wait value — should NOT broadcast
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: { type: 'wait_update', application_wait_ms: 1500 }
-            });
-
-            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
-                (call: any[]) => call[0]?.type === 'FEED_EVENT'
-            );
-            expect(feedCalls).toHaveLength(0);
-        });
-
-        it('should broadcast FEED_EVENT when depth_update has new values', async () => {
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: { type: 'depth_update', navigation_depth: {
-                    max_depth: 2, total_depth_changes: 1, depth_path: [{ direction: 'open', layer: 'modal' }]
-                }}
-            });
-            chrome.runtime.sendMessage.mockClear();
-
-            // Changed values — should broadcast
-            await sendMessage({
-                type: 'EVENT_CAPTURED',
-                payload: { type: 'depth_update', navigation_depth: {
-                    max_depth: 3, total_depth_changes: 2, depth_path: [{ direction: 'open', layer: 'modal' }, { direction: 'open', layer: 'dropdown' }]
-                }}
-            });
-
-            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
-                (call: any[]) => call[0]?.type === 'FEED_EVENT'
-            );
-            expect(feedCalls.length).toBeGreaterThanOrEqual(1);
         });
     });
 
@@ -747,6 +593,141 @@ describe('worker.ts', () => {
             expect(tot.active_ms).toBeLessThan(tot.total_ms);
             expect(tot.longest_idle_ms).toBeGreaterThan(0);
             expect(tot.longest_idle_after).toBeDefined();
+        });
+    });
+
+    describe('handleEvent — mouse_travel_update', () => {
+        beforeEach(async () => { await sendMessage({ type: 'START_RECORDING' }); });
+
+        it('should update mouse_travel metrics in recording', async () => {
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'mouse_travel_update', total_px: 1200, idle_travel_px: 300,
+                    move_events: 80, path_efficiency: null
+                }
+            });
+
+            const { recordingState, stats } = await chrome.storage.local.get(['recordingState', 'stats']);
+            const mt = recordingState.currentRecording.metrics.mouse_travel;
+            expect(mt.total_px).toBe(1200);
+            expect(mt.idle_travel_px).toBe(300);
+            expect(mt.move_events).toBe(80);
+            expect(stats.travel).toBe(1200);
+        });
+
+        it('should compute path_efficiency when scanning distance exists', async () => {
+            // First create some scanning distance via two clicks
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 100, y: 100,
+                    target: { tagName: 'BUTTON', id: '', innerText: 'A', rect: { width: 80, height: 32 } }
+                }
+            });
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 500, y: 100,
+                    target: { tagName: 'BUTTON', id: '', innerText: 'B', rect: { width: 80, height: 32 } }
+                }
+            });
+
+            // Now send mouse travel — path_efficiency = scanning / total_travel
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'mouse_travel_update', total_px: 800, idle_travel_px: 100,
+                    move_events: 50, path_efficiency: null
+                }
+            });
+
+            const { recordingState } = await chrome.storage.local.get('recordingState');
+            const mt = recordingState.currentRecording.metrics.mouse_travel;
+            // scanning_distance.cumulative_px = 400 (distance between two clicks)
+            // path_efficiency = 400 / 800 = 0.5
+            expect(mt.path_efficiency).toBeCloseTo(0.5, 2);
+        });
+
+        it('should broadcast FEED_EVENT for mouse travel', async () => {
+            chrome.runtime.sendMessage.mockClear();
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'mouse_travel_update', total_px: 500, idle_travel_px: 100,
+                    move_events: 30, path_efficiency: null
+                }
+            });
+
+            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
+                (call: any[]) => call[0]?.type === 'FEED_EVENT'
+            );
+            expect(feedCalls.length).toBeGreaterThanOrEqual(1);
+            const feedEvent = feedCalls[feedCalls.length - 1][0].event;
+            expect(feedEvent.type).toBe('mouse_travel');
+            expect(feedEvent.label).toContain('TRAVEL');
+        });
+    });
+
+    describe('composite score', () => {
+        beforeEach(async () => { await sendMessage({ type: 'START_RECORDING' }); });
+
+        it('should compute composite from switches, fitts, and scroll only', async () => {
+            // Generate 2 context switches via keyboard
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'keyboard_update',
+                    context_switches: { total: 3, ratio: 0.2, longest_keyboard_streak: 5, longest_mouse_streak: 2 },
+                    shortcut_coverage: { shortcuts_used: 1 },
+                    typing_ratio: { free_text_inputs: 0, constrained_inputs: 0, ratio: 0, free_text_fields: [] }
+                }
+            });
+
+            // Generate scroll
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: { type: 'scroll_update', total_px: 2000, page_scroll_px: 2000, container_scroll_px: 0, scroll_events: 10 }
+            });
+
+            // Generate clicks for Fitts
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 100, y: 100,
+                    target: { tagName: 'BUTTON', id: '', innerText: 'A', rect: { width: 80, height: 32 } }
+                }
+            });
+            await sendMessage({
+                type: 'EVENT_CAPTURED',
+                payload: {
+                    type: 'click', timestamp: Date.now(), x: 500, y: 100,
+                    target: { tagName: 'BUTTON', id: '', innerText: 'B', rect: { width: 40, height: 20 } }
+                }
+            });
+
+            const { stats } = await chrome.storage.local.get('stats');
+            // composite = (switches * 1.5) + (fitts_cumulative * 1.0) + (scroll * 0.005)
+            // = (3 * 1.5) + (fitts_id * 1.0) + (2000 * 0.005)
+            // = 4.5 + fitts_id + 10
+            expect(stats.composite).toBeGreaterThan(0);
+            // It should NOT contain wait or depth components — verify lower bound
+            // 3 switches * 1.5 = 4.5, 2000px scroll * 0.005 = 10, fitts > 0
+            expect(stats.composite).toBeGreaterThanOrEqual(14);
+        });
+    });
+
+    describe('startRecording — programmatic injection', () => {
+        it('should inject content script via chrome.scripting.executeScript', async () => {
+            chrome.scripting.executeScript.mockClear();
+            await sendMessage({ type: 'START_RECORDING' });
+
+            expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    target: { tabId: 1 },
+                    files: ['content-script.js']
+                })
+            );
         });
     });
 

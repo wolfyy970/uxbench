@@ -169,10 +169,6 @@
                                 "null"
                             ]
                         },
-                        "application_wait_ms": {
-                            "type": "integer",
-                            "minimum": 0
-                        },
                         "longest_idle_ms": {
                             "type": [
                                 "integer",
@@ -185,19 +181,6 @@
                                 "null"
                             ],
                             "description": "What happened before the longest idle gap — e.g. 'opened filter panel'"
-                        },
-                        "longest_wait_ms": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
-                        },
-                        "longest_wait_trigger": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
-                            "description": "What caused the longest app wait — e.g. 'clicked Search'"
                         },
                         "idle_gaps": {
                             "type": [
@@ -308,37 +291,6 @@
                         }
                     }
                 },
-                "information_density": {
-                    "type": "object",
-                    "properties": {
-                        "method": {
-                            "type": "string"
-                        },
-                        "average_content_ratio": {
-                            "type": "number"
-                        },
-                        "min_content_ratio": {
-                            "type": "number"
-                        },
-                        "max_content_ratio": {
-                            "type": "number"
-                        },
-                        "min_content_context": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
-                            "description": "Which screen state had the least content — e.g. 'settings page'"
-                        },
-                        "max_content_context": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
-                            "description": "Which screen state had the most content — e.g. 'data table view'"
-                        }
-                    }
-                },
                 "context_switches": {
                     "type": "object",
                     "properties": {
@@ -400,48 +352,6 @@
                             "description": "Which fields required typing — e.g. ['Customer name', 'Notes']",
                             "items": {
                                 "type": "string"
-                            }
-                        }
-                    }
-                },
-                "navigation_depth": {
-                    "type": "object",
-                    "properties": {
-                        "max_depth": {
-                            "type": "integer",
-                            "minimum": 0
-                        },
-                        "total_depth_changes": {
-                            "type": "integer",
-                            "minimum": 0
-                        },
-                        "deepest_moment": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
-                            "description": "What was open at max depth — e.g. 'modal > dropdown > date picker'"
-                        },
-                        "depth_path": {
-                            "type": [
-                                "array",
-                                "null"
-                            ],
-                            "description": "Sequence of layer opens/closes with names",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "direction": {
-                                        "type": "string",
-                                        "enum": [
-                                            "open",
-                                            "close"
-                                        ]
-                                    },
-                                    "layer": {
-                                        "type": "string"
-                                    }
-                                }
                             }
                         }
                     }
@@ -511,6 +421,34 @@
                                 "null"
                             ],
                             "description": "Which container demanded the most scrolling — e.g. 'customer list sidebar'"
+                        }
+                    }
+                },
+                "mouse_travel": {
+                    "type": "object",
+                    "description": "Total cursor travel distance — raw motor cost of moving the mouse across the session",
+                    "properties": {
+                        "total_px": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Cumulative pixel distance the cursor traveled"
+                        },
+                        "idle_travel_px": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Cursor travel that did not end in a click — hunting, exploring, overshooting"
+                        },
+                        "move_events": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of sampled movement frames"
+                        },
+                        "path_efficiency": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "description": "Ratio of straight-line scanning distance to actual cursor travel (1.0 = perfectly efficient, lower = more wasted movement)"
                         }
                     }
                 },

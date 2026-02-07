@@ -102,7 +102,11 @@ describe('ScrollCollector', () => {
         Object.defineProperty(container, 'scrollTop', { value: 0, writable: true, configurable: true });
         document.body.appendChild(container);
 
-        // Simulate container scroll
+        // First scroll event initializes the container baseline (no delta counted)
+        container.dispatchEvent(new Event('scroll', { bubbles: true }));
+        flushRAF();
+
+        // Now simulate actual user scroll to 150
         (container as any).scrollTop = 150;
         container.dispatchEvent(new Event('scroll', { bubbles: true }));
         flushRAF();

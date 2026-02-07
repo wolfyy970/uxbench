@@ -38,44 +38,42 @@ The Recorder is a "silent observer." It captures your interactions to calculate 
 ### Recording a Session
 The Recorder now resides in the Chrome Side Panel for real-time telemetry.
 
-1.  **Open the Side Panel:** Click the UX Bench icon or standard Chrome Side Panel icon.
-2.  **Calibrate Viewport:**
-    -   Select a resolution from the **VIEWPORT SIZE** dropdown (e.g., `1280x800`).
+1.  **Open the Side Panel:** Click the UX Bench icon or standard Chrome Side Panel icon. The Tablet viewport (1024x768) is auto-selected — you're ready to record immediately.
+2.  **(Optional) Change Viewport:**
+    -   Select a different resolution from the dropdown if needed.
     -   *Crucial:* The browser window will automatically resize. Do not manually resize it afterwards.
-    -   **START** button is disabled until a viewport is selected.
 3.  **Start Recording:**
-    -   Click **START** in the Side Panel.
+    -   Click **Start ⌘⇧R** in the Side Panel.
     -   *Or* use the hotkey: `Cmd+Shift+R` (Mac) / `Ctrl+Shift+R` (Windows).
-    -   Verify the status changes to `RECORDING` and the border turns green/red.
+    -   The null state shows "Get ready for Run 1" before you begin.
 4.  **Perform the Task:**
     -   Complete your workflow.
-    -   Observe **Live Telemetry** updating in real-time. The side panel shows all 10 metrics + composite:
-        -   **CLICKS** — total click count
-        -   **DEPTH** — UI layer depth
-        -   **SCROLL** — scroll distance in px
-        -   **FITTS** — Fitts Index of Difficulty
-        -   **SWITCHES** — mouse/keyboard transitions
-        -   **DENSITY** — information density
-        -   **SHORTCUTS** — modifier-key combos used (Ctrl/Cmd/Alt + key)
-        -   **TYPING** — free-text typing ratio
-        -   **SCAN** — avg scanning distance
-        -   **WAIT** — application wait time
-        -   **COST** — composite interaction cost score
+    -   Observe **Live Telemetry** updating in real-time. The side panel shows all 9 metrics + composite:
+        -   **Time** — elapsed time since recording started
+        -   **Idle Gaps** — pauses > 3s (user may be thinking or confused)
+        -   **Clicks** — total click count
+        -   **Target Effort** — Fitts Index of Difficulty
+        -   **Cursor** — total cursor travel distance
+        -   **Eye Travel** — avg scanning distance
+        -   **Scroll** — scroll distance in px
+        -   **Switches** — mouse/keyboard transitions
+        -   **Shortcuts** — modifier-key combos used
+        -   **Typing** — free-text typing ratio
+        -   **Cost** — composite interaction cost score
     -   Hover any metric label for a tooltip explaining what it measures.
     -   An **Activity Feed** timeline shows every captured event chronologically.
 5.  **Stop Recording:**
-    -   Click **STOP** or press the hotkey.
-    -   The run is added to the session buffer (`RUNS: 1`).
+    -   Click **Stop** or press the hotkey.
+    -   A "Run N complete" banner appears in the activity feed.
 
 ### Averaging Multiple Runs
 To account for variance in human motor performance, you can record multiple runs of the *same* task.
 
-1.  After stopping the first run, click **Start** again.
+1.  After stopping the first run, the null state updates to "Get ready for Run 2". Click **Start** again.
 2.  Reset the web page state (e.g., go back to start URL).
 3.  Perform the task again and Stop.
-4.  The counter will show `RUNS: 2`.
-5.  **Download:** Click **DOWNLOAD**. This generates a single JSON file (e.g., `_AVG_2runs.json`) containing the **average** scores across all runs.
-6.  **Clear:** Use **CLEAR** to discard current session data and start a fresh benchmark.
+4.  **Download:** Click **Download**. A native save dialog lets you name the file. Multi-run sessions produce an averaged JSON file (e.g., `_AVG_2runs.json`) containing the **average** scores across all runs.
+5.  **Reset:** Use **Reset** to discard current session data and start a fresh benchmark.
 
 ### Best Practices for Consistent Data
 -   **One Task, One File:** Don't mix multiple distinct workflows in one recording.

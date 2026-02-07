@@ -52,10 +52,6 @@
             "shortcuts_used": 15,
             "ratio": 0.95
         },
-        "navigation_depth": {
-            "max_depth": 1,
-            "total_depth_changes": 1
-        },
         "composite_score": 96.5
     }
 }

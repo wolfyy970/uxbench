@@ -7,12 +7,12 @@ const CEREMONIAL_SELECTORS = [
     '[data-testid*="cookie"]', '[data-testid*="consent"]',
 ].join(', ');
 
-const CEREMONIAL_TEXT = ['accept', 'accept all', 'got it', 'i agree', 'dismiss', 'decline', 'reject', 'ok'];
+// Elements the user perceives as a single clickable target.
+// When e.target is a child (icon, span), we walk up to the nearest interactive ancestor
+// so the bounding rect reflects the actual target (for Fitts) and disabled state is correct.
+const INTERACTIVE_SELECTOR = 'a, button, [role="button"], [role="link"], [role="menuitem"], [role="tab"], input, select, textarea, summary';
 
 import { NOOP } from './shared';
-
-/** Clicks on the same target within this window are classified as "rapid re-click" (wasted) */
-const RAPID_RECLICK_MS = 300;
 
 /** Shape of the click event data sent to the background worker */
 interface ClickEventData {
@@ -31,12 +31,24 @@ interface ClickEventData {
     classificationReason?: string;
 }
 
+/**
+ * Resolve the click target to the nearest interactive ancestor.
+ * If e.target is an icon/span inside a button, this returns the button.
+ * Falls back to the raw target when no interactive ancestor exists (e.g., plain text click).
+ */
+function resolveInteractiveTarget(raw: HTMLElement): HTMLElement {
+    try {
+        const interactive = raw.closest(INTERACTIVE_SELECTOR) as HTMLElement | null;
+        return interactive || raw;
+    } catch {
+        return raw;
+    }
+}
+
 export class ClickCollector {
     private handler = (e: MouseEvent) => this.handleClick(e);
-    private lastClickTime = 0;
-    private lastClickTarget: EventTarget | null = null;
 
-    // Callback for cross-collector coordination (context switches, density sampling)
+    // Callback for cross-collector coordination (context switches, mouse travel)
     onClickCaptured: ((target: HTMLElement) => void) | null = null;
 
     attach() {
@@ -47,47 +59,31 @@ export class ClickCollector {
         document.removeEventListener('click', this.handler, { capture: true });
     }
 
-    private classifyClick(target: HTMLElement, _e: MouseEvent): { classification: string; reason: string } {
-        // Wasted: disabled elements
-        if (target.hasAttribute('disabled') || target.getAttribute('aria-disabled') === 'true') {
-            return { classification: 'wasted', reason: 'disabled element' };
-        }
-
-        // Wasted: rapid re-click on same element (<300ms)
-        // Exception: editable elements where double-click selects text (intentional)
-        const now = Date.now();
-        if (this.lastClickTarget === target && (now - this.lastClickTime) < RAPID_RECLICK_MS) {
-            const isEditable = target.isContentEditable ||
-                target instanceof HTMLInputElement ||
-                target instanceof HTMLTextAreaElement;
-            if (!isEditable) {
-                return { classification: 'wasted', reason: 'rapid re-click' };
+    private classifyClick(target: HTMLElement): { classification: string; reason: string } {
+        // Wasted: disabled elements — walk up to catch disabled ancestors (e.g., icon inside disabled button)
+        try {
+            const disabled = target.closest('[disabled], [aria-disabled="true"]') as HTMLElement | null;
+            if (disabled) {
+                return { classification: 'wasted', reason: 'disabled element' };
             }
-        }
+        } catch { /* invalid selector on some pages */ }
 
-        // Ceremonial: cookie/consent/GDPR banners
+        // Ceremonial: cookie/consent/GDPR banners — interface overhead, not task work
         try {
             if (target.closest(CEREMONIAL_SELECTORS)) {
                 return { classification: 'ceremonial', reason: 'consent/cookie banner' };
             }
         } catch { /* invalid selector on some pages */ }
 
-        // Ceremonial: common dismiss text
-        const text = (target.innerText || '').toLowerCase().trim();
-        if (CEREMONIAL_TEXT.includes(text)) {
-            // Only if inside a banner-like container or modal
-            const parent = target.closest('[role="dialog"], [role="alertdialog"], .modal, [class*="banner"], [class*="overlay"]');
-            if (parent) {
-                return { classification: 'ceremonial', reason: 'dismiss/accept in overlay' };
-            }
-        }
-
         return { classification: 'productive', reason: '' };
     }
 
     private handleClick(e: MouseEvent) {
-        const target = e.target as HTMLElement;
-        const { classification, reason } = this.classifyClick(target, e);
+        const rawTarget = e.target as HTMLElement;
+        // Resolve to the nearest interactive ancestor so the rect and metadata
+        // reflect the actual clickable element, not a child icon/span.
+        const target = resolveInteractiveTarget(rawTarget);
+        const { classification, reason } = this.classifyClick(target);
 
         const eventData: ClickEventData = {
             type: 'click',
@@ -108,15 +104,12 @@ export class ClickCollector {
             eventData.classificationReason = reason;
         }
 
-        this.lastClickTime = Date.now();
-        this.lastClickTarget = target;
-
         chrome.runtime.sendMessage({
             type: 'EVENT_CAPTURED',
             payload: eventData
         }).catch(NOOP);
 
-        // Notify other collectors (context switches, density sampling)
-        if (this.onClickCaptured) this.onClickCaptured(target);
+        // Notify other collectors (context switches, mouse travel)
+        if (this.onClickCaptured) this.onClickCaptured(rawTarget);
     }
 }

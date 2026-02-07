@@ -27,6 +27,8 @@ export class KeyboardCollector {
     private constrainedInputs = 0;
     private freeTextFields: string[] = [];
     private trackedInputs: Set<HTMLElement> = new Set();
+    /** Free-text inputs that received focus but no keystrokes yet — label stored for later */
+    private pendingFreeText: Map<HTMLElement, string> = new Map();
     private updateTimer: ReturnType<typeof setTimeout> | null = null;
 
     attach() {
@@ -102,6 +104,16 @@ export class KeyboardCollector {
             this.shortcutsUsed += 1;
         }
 
+        // Promote pending free-text field: actual typing confirms it's a real interaction,
+        // not just tabbing through. Only count as free-text input once keystrokes land.
+        const target = e.target as HTMLElement;
+        if (this.pendingFreeText.has(target)) {
+            const label = this.pendingFreeText.get(target)!;
+            this.pendingFreeText.delete(target);
+            this.freeTextInputs += 1;
+            if (label) this.freeTextFields.push(label);
+        }
+
         this.scheduleUpdate();
     }
 
@@ -117,20 +129,22 @@ export class KeyboardCollector {
                 'datetime-local', 'month', 'week', 'time', 'file', 'hidden'];
 
             if (constrained.includes(type)) {
+                // Constrained inputs count on focus — focus = interaction (click/change)
                 this.constrainedInputs += 1;
             } else {
-                // text, email, password, search, tel, url, number
-                this.freeTextInputs += 1;
-                const label = target.labels?.[0]?.textContent?.trim() ||
-                    target.placeholder || target.name || target.id || target.type;
-                if (label) this.freeTextFields.push(label.substring(0, 50));
+                // Free-text fields: defer counting until actual typing occurs.
+                // Tabbing through a field without typing shouldn't inflate the ratio.
+                const label = (target.labels?.[0]?.textContent?.trim() ||
+                    target.placeholder || target.name || target.id || target.type)
+                    ?.substring(0, 50) || '';
+                this.pendingFreeText.set(target, label);
             }
         } else if (target instanceof HTMLTextAreaElement) {
             this.trackedInputs.add(target);
-            this.freeTextInputs += 1;
-            const label = target.labels?.[0]?.textContent?.trim() ||
-                target.placeholder || target.name || target.id || 'textarea';
-            if (label) this.freeTextFields.push(label.substring(0, 50));
+            const label = (target.labels?.[0]?.textContent?.trim() ||
+                target.placeholder || target.name || target.id || 'textarea')
+                ?.substring(0, 50) || '';
+            this.pendingFreeText.set(target, label);
         } else if (target instanceof HTMLSelectElement) {
             this.trackedInputs.add(target);
             this.constrainedInputs += 1;

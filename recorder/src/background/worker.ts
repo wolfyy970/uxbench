@@ -28,18 +28,13 @@ interface Metrics {
         ceremonial_details: DetailEntry[]; wasted_details: DetailEntry[];
     };
     time_on_task: {
-        total_ms: number; application_wait_ms: number; idle_gaps: IdleGap[];
+        total_ms: number; idle_gaps: IdleGap[];
         idle_ms?: number; active_ms?: number; longest_idle_ms?: number; longest_idle_after?: string;
     };
     fitts: {
         formula: string; cumulative_id: number; average_id: number;
         max_id: number; max_id_element: string; max_id_distance_px: number;
         max_id_target_size: string; top_3_hardest: FittsEntry[];
-    };
-    information_density: {
-        method: string; average_content_ratio: number;
-        min_content_ratio: number; max_content_ratio: number;
-        min_content_context?: string; max_content_context?: string;
     };
     context_switches: {
         total: number; ratio: number;
@@ -52,10 +47,6 @@ interface Metrics {
         free_text_inputs: number; constrained_inputs: number;
         ratio: number; free_text_fields: string[];
     };
-    navigation_depth: {
-        max_depth: number; total_depth_changes: number;
-        deepest_moment?: string; depth_path: DepthPathEntry[];
-    };
     scanning_distance: {
         method: string; cumulative_px: number;
         average_px: number; max_single_px: number;
@@ -65,13 +56,16 @@ interface Metrics {
         total_px: number; page_scroll_px?: number; container_scroll_px?: number;
         total_horizontal_px?: number; scroll_events?: number; heaviest_container?: string;
     };
+    mouse_travel: {
+        total_px: number; idle_travel_px: number; move_events: number;
+        path_efficiency: number | null;
+    };
     composite_score: number;
 }
 
 interface DetailEntry { element: string; reason: string; }
 interface IdleGap { gap_ms: number; after_action: string; before_action: string; _emitted?: boolean; }
 interface FittsEntry { element: string; id: number; distance_px: number; target_size: string; }
-interface DepthPathEntry { direction: string; layer: string; }
 interface ActionLogEntry { type: string; timestamp: number; target: string; text: string; classification: string; }
 
 interface ClickPayload {
@@ -90,20 +84,12 @@ interface KeyboardPayload {
     shortcut_coverage: { shortcuts_used: number };
     typing_ratio: { free_text_inputs: number; constrained_inputs: number; ratio: number; free_text_fields: string[] };
 }
-interface DepthPayload {
-    type: 'depth_update';
-    navigation_depth: { max_depth: number; total_depth_changes: number; deepest_moment?: string; depth_path: DepthPathEntry[] };
+interface MouseTravelPayload {
+    type: 'mouse_travel_update'; total_px: number; idle_travel_px: number;
+    move_events: number; path_efficiency: number | null;
 }
-interface DensityPayload {
-    type: 'density_update';
-    information_density: {
-        average_content_ratio: number; min_content_ratio: number; max_content_ratio: number;
-        min_content_context?: string; max_content_context?: string;
-    };
-}
-interface WaitPayload { type: 'wait_update'; application_wait_ms?: number; }
 
-type EventPayload = ClickPayload | ScrollPayload | KeyboardPayload | DepthPayload | DensityPayload | WaitPayload;
+type EventPayload = ClickPayload | ScrollPayload | KeyboardPayload | MouseTravelPayload;
 
 interface FeedEvent {
     id: number; ts: number; type: string;
@@ -123,6 +109,9 @@ interface MetricFormatDef {
  *  SYNC: content scripts share NOOP via content/shared.ts; worker keeps its own copy (separate MV3 execution context). */
 const NOOP = () => {};
 
+/** Brand accent color — SYNC: content/shared.ts and index.html --ds-orange */
+const BRAND_ORANGE = '#EE6019';
+
 // Named constants for magic numbers used in event processing
 const IDLE_GAP_MS = 3000;
 const ACTION_LOG_MAX = 500;
@@ -131,15 +120,14 @@ const SCROLL_FEED_THROTTLE_MS = 500;
 /** Format functions for each metric key — used by buildMetricSnapshot for live display values */
 const METRIC_FORMATS: Record<string, MetricFormatDef> = {
     clicks:    { format: v => v.toString() },
-    depth:     { format: v => v.toString() },
     scroll:    { format: v => formatCompact(Math.round(v)) },
     fitts:     { format: v => round2(v).toString() },
     switches:  { format: v => v.toString() },
-    density:   { format: v => v > 0 ? Math.round(v * 100) + '%' : '--' },
     shortcuts: { format: v => v.toString() },
     typing:    { format: v => round2(v).toString() },
     scanAvg:   { format: v => Math.round(v).toString() },
-    wait:      { format: v => v >= 1000 ? round2(v / 1000) + 's' : v + 'ms' },
+    travel:    { format: v => formatCompact(Math.round(v)) },
+    gaps:      { format: v => v.toString() },
     cost:      { format: v => v.toString() },
 };
 
@@ -161,17 +149,13 @@ function formatCompact(n: number): string {
  * so that a score of ~25 represents moderate UX friction.
  */
 const COMPOSITE_WEIGHTS = {
-    waitSec: 1.0,     // 1 point per second of forced waiting
-    depth: 2.0,       // navigation layers penalized heavily (modal-in-modal)
     switches: 1.5,    // each input mode switch = moderate friction
     fitts: 1.0,       // cumulative Fitts ID bits, direct pass-through
     scrollPx: 0.005,  // 200px scroll ≈ 1 point
 } as const;
 
 function computeComposite(m: Metrics): number {
-    return ((m.time_on_task.application_wait_ms || 0) / 1000 * COMPOSITE_WEIGHTS.waitSec) +
-        (m.navigation_depth.max_depth * COMPOSITE_WEIGHTS.depth) +
-        (m.context_switches.total * COMPOSITE_WEIGHTS.switches) +
+    return (m.context_switches.total * COMPOSITE_WEIGHTS.switches) +
         (m.fitts.cumulative_id * COMPOSITE_WEIGHTS.fitts) +
         (m.scroll_distance.total_px * COMPOSITE_WEIGHTS.scrollPx);
 }
@@ -180,15 +164,14 @@ function computeComposite(m: Metrics): number {
 function readMetric(m: Metrics, key: string): number {
     switch (key) {
         case 'clicks':    return m.click_count.total;
-        case 'depth':     return m.navigation_depth.max_depth;
         case 'scroll':    return m.scroll_distance.total_px;
         case 'fitts':     return m.fitts.average_id;
         case 'switches':  return m.context_switches.total;
-        case 'density':   return m.information_density.average_content_ratio;
         case 'shortcuts': return m.shortcut_coverage.shortcuts_used;
         case 'typing':    return m.typing_ratio.ratio;
         case 'scanAvg':   return m.scanning_distance.average_px;
-        case 'wait':      return m.time_on_task.application_wait_ms || 0;
+        case 'travel':    return m.mouse_travel.total_px;
+        case 'gaps':      return m.time_on_task.idle_gaps.length;
         case 'cost':      return 0; // handled separately
         default:          return 0;
     }
@@ -219,6 +202,9 @@ let isTransitioning = false;
 let feedCounter = 0;
 let lastScrollTotal = 0;
 let lastScrollFeedTime = 0;
+let lastTravelTotal = 0;
+let lastTravelFeedTime = 0;
+let emittedGapCount = 0;
 
 // ========================================================
 // Lifecycle: Install
@@ -300,16 +286,12 @@ async function startRecording() {
                     ceremonial_details: [], wasted_details: []
                 },
                 time_on_task: {
-                    total_ms: 0, application_wait_ms: 0, idle_gaps: []
+                    total_ms: 0, idle_gaps: []
                 },
                 fitts: {
                     formula: 'shannon', cumulative_id: 0, average_id: 0,
                     max_id: 0, max_id_element: '', max_id_distance_px: 0,
                     max_id_target_size: '', top_3_hardest: []
-                },
-                information_density: {
-                    method: 'dom-coverage', average_content_ratio: 0,
-                    min_content_ratio: 0, max_content_ratio: 0
                 },
                 context_switches: { total: 0, ratio: 0 },
                 shortcut_coverage: { shortcuts_used: 0 },
@@ -317,14 +299,12 @@ async function startRecording() {
                     free_text_inputs: 0, constrained_inputs: 0,
                     ratio: 0, free_text_fields: []
                 },
-                navigation_depth: {
-                    max_depth: 1, total_depth_changes: 0, depth_path: []
-                },
                 scanning_distance: {
                     method: 'euclidean', cumulative_px: 0,
                     average_px: 0, max_single_px: 0
                 },
                 scroll_distance: { total_px: 0 },
+                mouse_travel: { total_px: 0, idle_travel_px: 0, move_events: 0, path_efficiency: null },
                 composite_score: 0
             },
             action_log: []
@@ -335,6 +315,9 @@ async function startRecording() {
     feedCounter = 0;
     lastScrollTotal = 0;
     lastScrollFeedTime = 0;
+    lastTravelTotal = 0;
+    lastTravelFeedTime = 0;
+    emittedGapCount = 0;
 
     // Clear previous stats and report, write new state
     await chrome.storage.local.set({
@@ -343,15 +326,24 @@ async function startRecording() {
         benchmarkReport: null
     });
 
-    // Notify content script
+    // Ensure content script is present, then notify it.
+    // The manifest injects on page load, but tabs opened before the extension was
+    // installed/updated won't have the content script. Programmatic injection
+    // covers that gap. The content script guards against double-initialization.
     if (tab?.id) {
+        try {
+            await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ['content-script.js']
+            });
+        } catch { /* chrome:// pages, etc. — content script cannot be injected */ }
         chrome.tabs.sendMessage(tab.id, { type: 'RECORDING_STARTED' }).catch(NOOP);
     }
 
     // Badge (only if action is configured in manifest)
     if (chrome.action) {
         chrome.action.setBadgeText({ text: 'REC' }).catch(NOOP);
-        chrome.action.setBadgeBackgroundColor({ color: '#EE6019' }).catch(NOOP);
+        chrome.action.setBadgeBackgroundColor({ color: BRAND_ORANGE }).catch(NOOP);
     }
 
     // Notify side panel and other extension pages
@@ -570,34 +562,20 @@ function processKeyboardEvent(recording: BenchmarkReport, payload: KeyboardPaylo
     return true;
 }
 
-function processDepthEvent(recording: BenchmarkReport, payload: DepthPayload): boolean {
-    const nd = payload.navigation_depth;
-    const prev = recording.metrics.navigation_depth;
-    const changed = prev.max_depth !== nd.max_depth || prev.total_depth_changes !== nd.total_depth_changes;
-    prev.max_depth = nd.max_depth;
-    prev.total_depth_changes = nd.total_depth_changes;
-    prev.deepest_moment = nd.deepest_moment;
-    prev.depth_path = nd.depth_path;
-    return changed;
-}
+function processMouseTravelEvent(recording: BenchmarkReport, payload: MouseTravelPayload): boolean {
+    const prev = recording.metrics.mouse_travel.total_px;
+    recording.metrics.mouse_travel.total_px = payload.total_px;
+    recording.metrics.mouse_travel.idle_travel_px = payload.idle_travel_px;
+    recording.metrics.mouse_travel.move_events = payload.move_events;
 
-function processDensityEvent(recording: BenchmarkReport, payload: DensityPayload): boolean {
-    const id = payload.information_density;
-    const prev = recording.metrics.information_density;
-    const changed = prev.average_content_ratio !== id.average_content_ratio;
-    prev.average_content_ratio = id.average_content_ratio;
-    prev.min_content_ratio = id.min_content_ratio;
-    prev.max_content_ratio = id.max_content_ratio;
-    prev.min_content_context = id.min_content_context;
-    prev.max_content_context = id.max_content_context;
-    return changed;
-}
+    // Path efficiency: straight-line scanning distance / actual cursor travel
+    const scan = recording.metrics.scanning_distance.cumulative_px;
+    recording.metrics.mouse_travel.path_efficiency =
+        (payload.total_px > 0 && scan > 0)
+            ? Math.round((scan / payload.total_px) * 1000) / 1000
+            : null;
 
-function processWaitEvent(recording: BenchmarkReport, payload: WaitPayload): boolean {
-    const prev = recording.metrics.time_on_task.application_wait_ms;
-    const next = payload.application_wait_ms || 0;
-    recording.metrics.time_on_task.application_wait_ms = next;
-    return prev !== next;
+    return prev !== payload.total_px;
 }
 
 // ========================================================
@@ -611,7 +589,7 @@ async function handleEventInternal(payload: EventPayload) {
     const recording = recordingState.currentRecording as BenchmarkReport;
     const now = (payload as ClickPayload).timestamp || Date.now();
 
-    // Idle gap detection — only for user-initiated actions (not passive sensors like density/depth/wait)
+    // Idle gap detection — only for user-initiated actions (not passive sensors like mouse_travel)
     const isUserAction = payload.type === 'click' || payload.type === 'keyboard_update' || payload.type === 'scroll_update';
     if (isUserAction) {
         detectIdleGap(recording, payload, recordingState, now);
@@ -623,9 +601,7 @@ async function handleEventInternal(payload: EventPayload) {
         case 'click':          stateChanged = processClickEvent(recording, payload as ClickPayload, recordingState); break;
         case 'scroll_update':  stateChanged = processScrollEvent(recording, payload as ScrollPayload); break;
         case 'keyboard_update': stateChanged = processKeyboardEvent(recording, payload as KeyboardPayload, recordingState); break;
-        case 'depth_update':   stateChanged = processDepthEvent(recording, payload as DepthPayload); break;
-        case 'density_update': stateChanged = processDensityEvent(recording, payload as DensityPayload); break;
-        case 'wait_update':    stateChanged = processWaitEvent(recording, payload as WaitPayload); break;
+        case 'mouse_travel_update': stateChanged = processMouseTravelEvent(recording, payload as MouseTravelPayload); break;
     }
 
     if (!stateChanged) return;
@@ -637,16 +613,15 @@ async function handleEventInternal(payload: EventPayload) {
     // Build comprehensive stats for recovery (side panel opening mid-recording)
     const stats = {
         clicks: m.click_count.total,
-        depth: m.navigation_depth.max_depth,
         scroll: Math.round(m.scroll_distance.total_px),
         switches: m.context_switches.total,
         composite: compositeRounded,
         fitts: round2(m.fitts.average_id),
-        density: round2(m.information_density.average_content_ratio),
         shortcuts: m.shortcut_coverage.shortcuts_used,
         typing: round2(m.typing_ratio.ratio),
         scanAvg: Math.round(m.scanning_distance.average_px),
-        waitMs: m.time_on_task.application_wait_ms || 0
+        travel: Math.round(m.mouse_travel.total_px),
+        gaps: m.time_on_task.idle_gaps.length
     };
 
     // Write updated recording state and all metric stats
@@ -666,7 +641,7 @@ async function handleEventInternal(payload: EventPayload) {
 type FeedBuilderFn = (payload: EventPayload, m: Metrics, id: number, ts: number,
     metricUpdates: Record<string, { value: string }>) => FeedEvent | null;
 
-function buildClickFeed(payload: EventPayload, _m: Metrics, id: number, ts: number,
+function buildClickFeed(payload: EventPayload, m: Metrics, id: number, ts: number,
     metricUpdates: Record<string, { value: string }>): FeedEvent {
     const p = payload as ClickPayload;
     const tag = p.target?.tagName || 'EL';
@@ -675,7 +650,7 @@ function buildClickFeed(payload: EventPayload, _m: Metrics, id: number, ts: numb
     const cls = p.classification || 'productive';
     return {
         id, ts, type: 'click',
-        label: `CLK ${tag}${elId}`,
+        label: `CLICK ${tag}${elId} (${m.click_count.total})`,
         detail: cls !== 'productive' ? `${cls}: ${p.classificationReason || text}` : text,
         metricUpdates
     };
@@ -687,11 +662,12 @@ function buildScrollFeed(payload: EventPayload, _m: Metrics, id: number, ts: num
     if (scrollNow - lastScrollFeedTime < SCROLL_FEED_THROTTLE_MS) return null;
     lastScrollFeedTime = scrollNow;
 
-    const delta = Math.round((payload as ScrollPayload).total_px - lastScrollTotal);
-    lastScrollTotal = (payload as ScrollPayload).total_px;
+    const total = (payload as ScrollPayload).total_px;
+    const delta = Math.round(total - lastScrollTotal);
+    lastScrollTotal = total;
     return {
         id, ts, type: 'scroll',
-        label: `SCROLL +${formatCompact(delta)}px`,
+        label: `SCROLL +${formatCompact(delta)}px (${formatCompact(Math.round(total))})`,
         metricUpdates
     };
 }
@@ -699,58 +675,39 @@ function buildScrollFeed(payload: EventPayload, _m: Metrics, id: number, ts: num
 function buildKeyboardFeed(_payload: EventPayload, m: Metrics, id: number, ts: number,
     metricUpdates: Record<string, { value: string }>): FeedEvent {
     const parts: string[] = [];
-    if (m.context_switches.total > 0) parts.push(`sw:${m.context_switches.total}`);
-    if (m.shortcut_coverage.shortcuts_used > 0) parts.push(`shortcuts:${m.shortcut_coverage.shortcuts_used}`);
-    if (m.typing_ratio.ratio > 0) parts.push(`typing:${round2(m.typing_ratio.ratio)}`);
+    if (m.context_switches.total > 0) parts.push(`${m.context_switches.total} switches`);
+    if (m.shortcut_coverage.shortcuts_used > 0) parts.push(`${m.shortcut_coverage.shortcuts_used} shortcuts`);
+    const totalActions = m.context_switches.total + m.shortcut_coverage.shortcuts_used;
     return {
         id, ts, type: 'keyboard',
-        label: `KBD ${parts.join(' ')}`,
+        label: `KEYBOARD${totalActions > 0 ? ' (' + totalActions + ')' : ''}`,
+        detail: parts.length > 0 ? parts.join(', ') : undefined,
         metricUpdates
     };
 }
 
-function buildDepthFeed(payload: EventPayload, m: Metrics, id: number, ts: number,
-    metricUpdates: Record<string, { value: string }>): FeedEvent {
-    const path = (payload as DepthPayload).navigation_depth?.depth_path || [];
-    const last = path[path.length - 1];
-    const direction = last?.direction || 'change';
-    const layer = last?.layer || 'layer';
-    return {
-        id, ts, type: 'depth',
-        label: `DEPTH ${direction} ${layer}`,
-        detail: `max: ${m.navigation_depth.max_depth}`,
-        metricUpdates
-    };
-}
+function buildMouseTravelFeed(_payload: EventPayload, m: Metrics, id: number, ts: number,
+    metricUpdates: Record<string, { value: string }>): FeedEvent | null {
+    const travelNow = Date.now();
+    if (travelNow - lastTravelFeedTime < SCROLL_FEED_THROTTLE_MS) return null;
+    lastTravelFeedTime = travelNow;
 
-function buildDensityFeed(_payload: EventPayload, m: Metrics, id: number, ts: number,
-    metricUpdates: Record<string, { value: string }>): FeedEvent {
-    const pct = Math.round(m.information_density.average_content_ratio * 100);
+    const total = m.mouse_travel.total_px;
+    const delta = Math.round(total - lastTravelTotal);
+    lastTravelTotal = total;
     return {
-        id, ts, type: 'density',
-        label: `DENSITY ${pct}%`,
-        metricUpdates
-    };
-}
-
-function buildWaitFeed(_payload: EventPayload, m: Metrics, id: number, ts: number,
-    metricUpdates: Record<string, { value: string }>): FeedEvent {
-    const waitMs = m.time_on_task.application_wait_ms || 0;
-    return {
-        id, ts, type: 'wait',
-        label: `WAIT ${METRIC_FORMATS.wait.format(waitMs)}`,
+        id, ts, type: 'mouse_travel',
+        label: `TRAVEL +${formatCompact(delta)}px (${formatCompact(Math.round(total))})`,
         metricUpdates
     };
 }
 
 /** Dispatch table: event type → feed label builder */
 const FEED_BUILDERS: Record<string, FeedBuilderFn> = {
-    'click':           buildClickFeed,
-    'scroll_update':   buildScrollFeed,
-    'keyboard_update': buildKeyboardFeed,
-    'depth_update':    buildDepthFeed,
-    'density_update':  buildDensityFeed,
-    'wait_update':     buildWaitFeed,
+    'click':                buildClickFeed,
+    'scroll_update':        buildScrollFeed,
+    'keyboard_update':      buildKeyboardFeed,
+    'mouse_travel_update':  buildMouseTravelFeed,
 };
 
 // ========================================================
@@ -764,25 +721,23 @@ function buildFeedEvent(payload: EventPayload, m: Metrics, composite: number, ts
     // Build metric snapshot via data-driven loop
     const metricUpdates = buildMetricSnapshot(m, composite);
 
-    // Check for idle gap that was just recorded
+    // Emit any new idle gaps (use counter to avoid re-emitting after storage round-trip)
     const gaps = m.time_on_task.idle_gaps || [];
-    if (gaps.length > 0) {
-        const lastGap = gaps[gaps.length - 1];
-        if (lastGap && lastGap._emitted !== true) {
-            lastGap._emitted = true;
-            const gapSec = round2(lastGap.gap_ms / 1000);
-            chrome.runtime.sendMessage({
-                type: 'FEED_EVENT',
-                event: {
-                    id: id - 0.5,
-                    ts,
-                    type: 'gap',
-                    label: `GAP ${gapSec}s idle`,
-                    detail: `after: ${lastGap.after_action}`,
-                    metricUpdates: {}
-                }
-            }).catch(NOOP);
-        }
+    while (emittedGapCount < gaps.length) {
+        const gap = gaps[emittedGapCount];
+        emittedGapCount++;
+        const gapSec = round2(gap.gap_ms / 1000);
+        chrome.runtime.sendMessage({
+            type: 'FEED_EVENT',
+            event: {
+                id: id - 0.5,
+                ts,
+                type: 'gap',
+                label: `GAP ${gapSec}s idle`,
+                detail: `after "${gap.after_action}"`,
+                metricUpdates: {}
+            }
+        }).catch(NOOP);
     }
 
     const builder = FEED_BUILDERS[payload.type];

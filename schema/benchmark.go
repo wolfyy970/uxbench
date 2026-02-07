@@ -33,11 +33,9 @@ type BenchmarkMetrics struct {
 	ClickCount       ClickCount       `json:"click_count"`
 	TimeOnTask       TimeOnTask       `json:"time_on_task"`
 	Fitts            Fitts            `json:"fitts"`
-	InformationDensity InformationDensity `json:"information_density"`
 	ContextSwitches  ContextSwitches  `json:"context_switches"`
 	ShortcutCoverage ShortcutCoverage `json:"shortcut_coverage"`
 	TypingRatio      TypingRatio      `json:"typing_ratio"`
-	NavigationDepth  NavigationDepth  `json:"navigation_depth"`
 	ScanningDistance ScanningDistance `json:"scanning_distance"`
 	ScrollDistance   ScrollDistance   `json:"scroll_distance"`
 	CompositeScore   float64          `json:"composite_score"`
@@ -61,11 +59,8 @@ type TimeOnTask struct {
 	TotalMS           int           `json:"total_ms"`
 	ActiveMS          *int          `json:"active_ms"`
 	IdleMS            *int          `json:"idle_ms"`
-	ApplicationWaitMS int           `json:"application_wait_ms"`
 	LongestIdleMS     *int          `json:"longest_idle_ms"`
 	LongestIdleAfter  *string       `json:"longest_idle_after"`
-	LongestWaitMS     *int          `json:"longest_wait_ms"`
-	LongestWaitTrigger *string      `json:"longest_wait_trigger"`
 	IdleGaps          []IdleGap      `json:"idle_gaps"`
 }
 
@@ -102,15 +97,6 @@ type FittsThroughput struct {
 	RSquared    float64 `json:"r_squared"`
 }
 
-type InformationDensity struct {
-	Method            string  `json:"method"`
-	AverageContentRatio float64 `json:"average_content_ratio"`
-	MinContentRatio   float64 `json:"min_content_ratio"`
-	MaxContentRatio   float64 `json:"max_content_ratio"`
-	MinContentContext *string `json:"min_content_context"`
-	MaxContentContext *string `json:"max_content_context"`
-}
-
 type ContextSwitches struct {
 	Total                 int     `json:"total"`
 	Ratio                 float64 `json:"ratio"`
@@ -128,18 +114,6 @@ type TypingRatio struct {
 	ConstrainedInputs int      `json:"constrained_inputs"`
 	Ratio             float64  `json:"ratio"`
 	FreeTextFields    []string `json:"free_text_fields"`
-}
-
-type NavigationDepth struct {
-	MaxDepth          int           `json:"max_depth"`
-	TotalDepthChanges int           `json:"total_depth_changes"`
-	DeepestMoment     *string       `json:"deepest_moment"`
-	DepthPath         []DepthChange `json:"depth_path"`
-}
-
-type DepthChange struct {
-	Direction string `json:"direction"`
-	Layer     string `json:"layer"`
 }
 
 type ScanningDistance struct {

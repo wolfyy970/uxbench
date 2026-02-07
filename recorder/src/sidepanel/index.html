@@ -43,16 +43,20 @@
       --border-focus:   var(--ds-orange);
 
       /* ========================================================
+         DESIGN SYSTEM — Alpha Scale
+         Used by tints, glows, and disabled/animation states.
+         ======================================================== */
+      --alpha-subtle:   8%;
+      --alpha-light:   15%;
+      --alpha-medium:  25%;
+      --alpha-muted:   0.4;   /* disabled elements */
+      --alpha-dim:     0.3;   /* animation low point */
+
+      /* ========================================================
          DESIGN SYSTEM — Semantic Tokens (Feedback)
          ======================================================== */
-      /* Glow derived from accent color */
-      --glow-accent:    color-mix(in srgb, var(--ds-orange) 25%, transparent);
+      --glow-accent:        color-mix(in srgb, var(--ds-orange) var(--alpha-medium), transparent);
 
-      /* Interactive surface tints */
-      --tint-hover:     color-mix(in srgb, var(--ds-orange) 10%, transparent);
-      --tint-active:    color-mix(in srgb, var(--ds-orange) 18%, transparent);
-      --tint-danger:    color-mix(in srgb, var(--ds-orange) 8%, transparent);
-      --tint-danger-h:  color-mix(in srgb, var(--ds-orange) 15%, transparent);
 
       /* ========================================================
          DESIGN SYSTEM — Typography Scale
@@ -60,6 +64,7 @@
          ======================================================== */
       --font-family:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
+      --text-display:   16px;   /* null-state hero, run indicator   */
       --text-h1:        13px;   /* panel title / hero number       */
       --text-h2:        11px;   /* section header, prominent value  */
       --text-body:      10px;   /* default body, metric values      */
@@ -192,25 +197,13 @@
       border-radius: var(--radius-lg);
       padding: var(--space-4) var(--space-5);
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
       flex-shrink: 0;
     }
 
     .header-brand {
       color: var(--fg-accent);
-    }
-
-    .header-meta {
-      font-size: var(--text-body);
-      font-weight: var(--weight-medium);
-      color: var(--fg-faint);
-    }
-
-    .header-clock {
-      font-size: var(--text-h2);
-      font-weight: var(--weight-semi);
-      color: var(--fg-muted);
     }
 
 
@@ -228,42 +221,17 @@
     }
 
 
-    /* ========================================================
-       COMPONENT — Checklist (Pre-flight)
-       ======================================================== */
-    .checklist {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-    }
-
-    .check-item {
-      display: flex;
-      align-items: center;
-      gap: var(--space-4);
-      font-size: var(--text-body);
-      color: var(--fg-muted);
-    }
-
-    .check-box {
-      width: var(--space-5);
-      height: var(--space-5);
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-sm);
-      display: inline-block;
-      background: var(--bg-overlay);
-      flex-shrink: 0;
-    }
-
-    body.recording .preflight {
-      display: none;
-    }
 
 
     /* ========================================================
        COMPONENT — Button
        ======================================================== */
-    button {
+    /* --------------------------------------------------------
+       Interactive surface — unified states for buttons,
+       format-select, and viewport-select.
+       Orange border = "you are interacting with this".
+       -------------------------------------------------------- */
+    button, .format-select {
       background: var(--bg-raised);
       color: var(--fg-default);
       border: 1px solid var(--border-default);
@@ -275,28 +243,35 @@
       letter-spacing: var(--tracking-normal);
       text-transform: uppercase;
       cursor: pointer;
-      width: 100%;
       text-align: center;
       flex-shrink: 0;
+      outline: none;
       transition: all var(--ease-default);
     }
 
-    button:hover {
-      background: var(--tint-hover);
-      border-color: var(--fg-faint);
+    button { width: 100%; }
+
+    button:hover, .format-select:hover {
+      border-color: var(--border-focus);
     }
 
-    button:active {
+    button:active, .format-select:active {
       transform: translateY(1px);
-      background: var(--tint-active);
+      border-color: var(--border-focus);
+      background: var(--bg-overlay);
     }
 
-    button:disabled {
+    button:focus-visible, .format-select:focus-visible {
+      border-color: var(--border-focus);
+      box-shadow: var(--shadow-glow-accent);
+    }
+
+    button:disabled, .format-select:disabled {
       border-color: var(--border-subtle);
       color: var(--fg-faint);
       cursor: not-allowed;
       pointer-events: none;
-      opacity: 0.4;
+      opacity: var(--alpha-muted);
     }
 
     .btn-row {
@@ -307,11 +282,24 @@
     .btn-flex-2 { flex: 2; }
     .btn-flex-1 { flex: 1; }
 
+    .format-select {
+      flex: 0 0 auto;
+      width: auto;
+      padding-right: var(--space-8);
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8381' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right var(--space-3) center;
+      background-size: var(--space-5);
+    }
+
 
     /* ========================================================
-       COMPONENT — Select
+       COMPONENT — Viewport Select
+       Same interaction language as buttons: orange border on hover/focus.
        ======================================================== */
-    select {
+    select:not(.format-select) {
       width: 100%;
       background: var(--bg-raised);
       color: var(--fg-default);
@@ -323,16 +311,15 @@
       outline: none;
       -webkit-appearance: none;
       appearance: none;
-      /* Chevron icon — stroke color references ds-warm-gray */
       background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8381' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
       background-repeat: no-repeat;
       background-position: right var(--space-3) center;
       background-size: var(--space-6);
-      transition: border-color var(--ease-default);
+      transition: all var(--ease-default);
     }
 
-    select:hover  { border-color: var(--fg-faint); }
-    select:focus  { border-color: var(--border-focus); }
+    select:not(.format-select):hover  { border-color: var(--border-focus); }
+    select:not(.format-select):focus  { border-color: var(--border-focus); box-shadow: var(--shadow-glow-accent); }
 
 
     /* ========================================================
@@ -363,7 +350,7 @@
     }
 
     .metric-key {
-      color: var(--fg-faint);
+      color: var(--fg-muted);
       font-size: var(--text-caption);
       font-weight: var(--weight-medium);
       letter-spacing: var(--tracking-normal);
@@ -492,12 +479,49 @@
       margin-top: 1px;
     }
 
-    /* Empty state */
-    .feed-empty {
-      color: var(--fg-faint);
-      font-size: var(--text-body);
+    /* Null state — shown when feed is empty (fresh open or after reset) */
+    .feed-null {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: var(--space-4);
       text-align: center;
-      padding: var(--space-8) 0;
+    }
+
+    .feed-null-label {
+      color: var(--fg-muted);
+      font-size: var(--text-body);
+      font-weight: var(--weight-medium);
+      letter-spacing: var(--tracking-normal);
+      text-transform: uppercase;
+    }
+
+    .feed-null-run {
+      font-size: var(--text-display);
+      font-weight: var(--weight-bold);
+      color: var(--fg-accent);
+      letter-spacing: var(--tracking-wider);
+      text-transform: uppercase;
+    }
+
+    .feed-null-hint {
+      color: var(--fg-muted);
+      font-size: var(--text-caption);
+      line-height: var(--leading-normal);
+    }
+
+    /* Run-complete banner — appended to feed when a recording finishes */
+    .feed-complete {
+      text-align: center;
+      padding: var(--space-5) 0 var(--space-2);
+      margin-top: var(--space-3);
+      color: var(--fg-muted);
+      font-size: var(--text-caption);
+      font-weight: var(--weight-semi);
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
     }
 
 
@@ -536,13 +560,12 @@
     }
 
     body.recording button#actionBtn {
-      border-color: var(--fg-accent);
-      color: var(--fg-accent);
-      background: var(--tint-danger);
+      color: var(--fg-default);
+      background: var(--bg-overlay);
     }
 
     body.recording button#actionBtn:hover {
-      background: var(--tint-danger-h);
+      border-color: var(--border-focus);
     }
 
 
@@ -551,7 +574,7 @@
        ======================================================== */
     @keyframes pulse {
       0%, 100% { opacity: 1; }
-      50%      { opacity: 0.3; }
+      50%      { opacity: var(--alpha-dim); }
     }
   </style>
 </head>
@@ -561,15 +584,12 @@
 
     <header>
       <span class="header-brand t-h1">UX BENCH</span>
-      <span class="header-meta t-body" id="runCount">RUNS: 0</span>
-      <span class="header-clock t-h2 t-mono" id="liveTime">00:00</span>
     </header>
 
     <div class="section">
       <span class="section-label t-caption">Viewport</span>
       <select id="resSelect">
-        <option value="" disabled selected>Select resolution</option>
-        <option value="1024x768">1024 × 768 — Tablet</option>
+        <option value="1024x768" selected>1024 × 768 — Tablet</option>
         <option value="1280x800">1280 × 800 — Laptop</option>
         <option value="1366x768">1366 × 768 — Common</option>
         <option value="1440x900">1440 × 900 — Desktop</option>
@@ -577,47 +597,53 @@
       </select>
     </div>
 
-    <div class="section preflight">
-      <span class="section-label t-caption">Pre-flight</span>
-      <div class="checklist">
-        <div class="check-item"><span class="check-box"></span> Navigate to target URL</div>
-        <div class="check-item"><span class="check-box"></span> Center cursor on page</div>
-      </div>
-    </div>
-
     <div class="section">
       <span class="section-label t-caption">Metrics</span>
       <div class="metric-grid card">
-        <div class="metric-cell"><span class="metric-key" title="Total clicks recorded (productive, ceremonial, and wasted)">CLICKS</span><span id="mClicks" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Navigation depth — how many UI layers deep the user goes (modals, drawers, sub-menus)">DEPTH</span><span id="mDepth" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Total scroll distance in pixels — higher values may indicate content is hard to find">SCROLL</span><span id="mScroll" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Fitts' Law index of difficulty — average effort to reach click targets (distance vs. size)">FITTS</span><span id="mFitts" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Context switches between mouse and keyboard input modes">SWITCHES</span><span id="mSwitches" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Information density — ratio of content area to total viewport area">DENSITY</span><span id="mDensity" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Modifier-key combos used (Ctrl/Cmd/Alt + key) — signals keyboard proficiency">SHORTCUTS</span><span id="mShortcuts" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Typing ratio — free-text inputs vs. constrained inputs (dropdowns, toggles, pickers)">TYPING</span><span id="mTyping" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Average scanning distance in pixels between consecutive click targets">SCAN</span><span id="mScan" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Application wait time — time spent waiting for the application to respond">WAIT</span><span id="mWait" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell metric-cost"><span class="metric-key" title="Composite interaction cost score — weighted sum of all metrics (lower is better)">COST</span><span id="mCost" class="metric-val t-mono">--</span></div>
+        <!-- Temporal -->
+        <div class="metric-cell"><span class="metric-key" title="Total elapsed time since recording started">Time</span><span id="mTaskTime" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Pauses longer than 3 seconds — user may be thinking, searching, or confused">Idle Gaps</span><span id="mGaps" class="metric-val t-mono">--</span></div>
+        <!-- Click & Targeting -->
+        <div class="metric-cell"><span class="metric-key" title="Total clicks recorded (productive, ceremonial, and wasted)">Clicks</span><span id="mClicks" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Fitts' Law index of difficulty — average effort to reach click targets (distance vs. size)">Target Effort</span><span id="mFitts" class="metric-val t-mono">--</span></div>
+        <!-- Movement -->
+        <div class="metric-cell"><span class="metric-key" title="Total cursor travel distance — raw motor cost of mouse movement across the session">Cursor</span><span id="mTravel" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Average scanning distance in pixels between consecutive click targets">Eye Travel</span><span id="mScan" class="metric-val t-mono">--</span></div>
+        <!-- Navigation -->
+        <div class="metric-cell"><span class="metric-key" title="Total scroll distance in pixels — higher values may indicate content is hard to find">Scroll</span><span id="mScroll" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Context switches between mouse and keyboard input modes">Switches</span><span id="mSwitches" class="metric-val t-mono">--</span></div>
+        <!-- Input -->
+        <div class="metric-cell"><span class="metric-key" title="Modifier-key combos used (Ctrl/Cmd/Alt + key) — signals keyboard proficiency">Shortcuts</span><span id="mShortcuts" class="metric-val t-mono">--</span></div>
+        <div class="metric-cell"><span class="metric-key" title="Typing ratio — free-text inputs vs. constrained inputs (dropdowns, toggles, pickers)">Typing</span><span id="mTyping" class="metric-val t-mono">--</span></div>
+        <!-- Summary -->
+        <div class="metric-cell metric-cost"><span class="metric-key" title="Composite interaction cost score — weighted sum of all metrics (lower is better)">Cost</span><span id="mCost" class="metric-val t-mono">--</span></div>
       </div>
     </div>
 
     <div class="section feed-section card">
       <span class="section-label t-caption">Activity</span>
       <div id="feed" class="feed">
-        <div class="feed-empty">Waiting for recording...</div>
+        <div class="feed-null">
+          <span class="feed-null-label">Get ready for</span>
+          <span class="feed-null-run">Run 1</span>
+          <span class="feed-null-hint">Multiple runs are averaged<br>for reliable metrics.</span>
+        </div>
       </div>
     </div>
 
-    <button id="actionBtn" disabled>Start</button>
-    <div class="btn-row">
+    <button id="actionBtn" disabled>Start ⌘⇧R</button>
+    <div class="btn-row" style="display:none">
+      <select id="formatSelect" class="format-select" disabled>
+        <option value="json">JSON</option>
+        <option value="markdown">Report</option>
+      </select>
       <button id="downloadBtn" class="btn-flex-2" disabled>Download</button>
-      <button id="clearBtn" class="btn-flex-1" disabled>Clear</button>
+      <button id="clearBtn" class="btn-flex-1" disabled>Reset</button>
     </div>
 
     <div class="status-bar" id="status">
-      <span><span class="rec-indicator"></span>Ready</span>
-      <span>⌘⇧R</span>
+      <span><span class="rec-indicator"></span><span id="statusText">Ready</span></span>
+      <span id="liveTime" class="t-mono"></span>
     </div>
 
   </div>

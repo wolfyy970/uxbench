@@ -202,13 +202,15 @@ describe('KeyboardCollector', () => {
         textarea.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
         select.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
 
-        // Now trigger a keydown to get the update
-        keydown('x');
+        // Free-text fields are only counted when actual typing occurs (not just focus).
+        // Dispatch keydown ON the input elements so e.target matches the pending fields.
+        textInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+        textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true }));
         flushDebounce();
 
         const payload = chrome.runtime.sendMessage.mock.calls[0][0].payload;
-        expect(payload.typing_ratio.free_text_inputs).toBe(2); // text + textarea
-        expect(payload.typing_ratio.constrained_inputs).toBe(2); // checkbox + select
+        expect(payload.typing_ratio.free_text_inputs).toBe(2); // text + textarea (typed in)
+        expect(payload.typing_ratio.constrained_inputs).toBe(2); // checkbox + select (focus-counted)
         expect(payload.typing_ratio.ratio).toBeCloseTo(0.5);
 
         document.body.removeChild(textInput);
@@ -228,7 +230,8 @@ describe('KeyboardCollector', () => {
         input.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
         input.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
 
-        keydown('a');
+        // Type in the field to promote it from pending → counted
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
         flushDebounce();
 
         const payload = chrome.runtime.sendMessage.mock.calls[0][0].payload;

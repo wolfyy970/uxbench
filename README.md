@@ -13,7 +13,7 @@ This README is the entry point. For details, consult the specific documents belo
 *   **[PRODUCT.md](./PRODUCT.md)**: The single source of truth for features, product specification, and design philosophy. **Start here.**
 *   **[USER_GUIDE.md](./USER_GUIDE.md)**: Step-by-step instructions for installing tools, recording sessions, and using the Analyzer TUI.
 *   **[ARCHITECTURE.md](./ARCHITECTURE.md)**: System design, repository structure, schema definition, and technical constraints.
-*   **[RESEARCHER.md](./RESEARCHER.md)**: Technical briefing on the scientific basis, measurement methodology, and calculation of the 10 core metrics.
+*   **[RESEARCHER.md](./RESEARCHER.md)**: Technical briefing on the scientific basis, measurement methodology, and calculation of the 9 core metrics.
 *   **[DOCUMENTATION.md](./DOCUMENTATION.md)**: Guide for maintaining this documentation.
 
 ---

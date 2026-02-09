@@ -11,7 +11,8 @@ UX Bench is a toolkit for measuring the *work* a user interface demands. It capt
 This README is the entry point. For details, consult the specific documents below:
 
 *   **[PRODUCT.md](./PRODUCT.md)**: The single source of truth for features, product specification, and design philosophy. **Start here.**
-*   **[USER_GUIDE.md](./USER_GUIDE.md)**: Step-by-step instructions for installing tools, recording sessions, and using the Analyzer TUI.
+*   **[RECORDER_GUIDE.md](./RECORDER_GUIDE.md)**: Installing the Chrome Extension, recording sessions, and multi-run averaging.
+*   **[CLI_GUIDE.md](./CLI_GUIDE.md)**: Installing the Analyzer CLI, using the TUI, and exporting reports.
 *   **[ARCHITECTURE.md](./ARCHITECTURE.md)**: System design, repository structure, schema definition, and technical constraints.
 *   **[RESEARCHER.md](./RESEARCHER.md)**: Technical briefing on the scientific basis, measurement methodology, and calculation of the 9 core metrics.
 *   **[DOCUMENTATION.md](./DOCUMENTATION.md)**: Guide for maintaining this documentation.

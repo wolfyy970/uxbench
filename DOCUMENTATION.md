@@ -15,7 +15,8 @@
 ```
 README.md (Hub)
 ├── PRODUCT.md        — Feature spec, what exists
-├── USER_GUIDE.md     — How to install, record, analyze
+├── RECORDER_GUIDE.md — How to install and use the Recorder
+├── CLI_GUIDE.md      — How to install and use the Analyzer CLI
 ├── ARCHITECTURE.md   — System design, data flow, technical constraints
 ├── RESEARCHER.md     — Scientific basis, metric methodology
 └── DOCUMENTATION.md  — This file (meta-documentation)
@@ -29,7 +30,8 @@ README.md (Hub)
 |----------|---------|----------------|
 | **README.md** | Entry point, quick start, doc map | Major features |
 | **PRODUCT.md** | Feature source of truth (prevents hallucination) | Feature launches |
-| **USER_GUIDE.md** | Installation, recording workflow, CLI usage | UX changes |
+| **RECORDER_GUIDE.md** | Extension install, recording workflow | Recorder UX changes |
+| **CLI_GUIDE.md** | CLI install, TUI usage, report export | Analyzer UX changes |
 | **ARCHITECTURE.md** | System design, module boundaries, data flow | Architecture changes |
 | **RESEARCHER.md** | Scientific methodology, metric definitions | Metric changes |
 | **DOCUMENTATION.md** | Meta: documentation philosophy and rules | Rarely |

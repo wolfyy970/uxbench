@@ -1,4 +1,5 @@
 /// <reference types="chrome"/>
+import { formatTaskTime, formatDuration, round2, formatCompact, getPath, setPath } from './utils';
 
 // ========================================================
 // Local types (MV3: cannot share imports with service worker)
@@ -326,14 +327,6 @@ function setMetricValue(el: HTMLSpanElement | null, value: string) {
 }
 
 // --- Clock (drives status bar timer AND Time on Task metric cell) ---
-function formatTaskTime(ms: number): string {
-    const secs = Math.floor(ms / 1000);
-    if (secs < 60) return `${secs}s`;
-    const mins = Math.floor(secs / 60);
-    const rem = secs % 60;
-    return `${mins}m ${rem}s`;
-}
-
 function startClock(startTime: number) {
     recordingStartTime = startTime;
     if (clockInterval) clearInterval(clockInterval);
@@ -344,7 +337,7 @@ function startClock(startTime: number) {
         const secs = seconds % 60;
         if (liveTime) liveTime.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
         if (metricEls.taskTime) metricEls.taskTime.textContent = formatTaskTime(elapsed);
-    }, 1000);
+    }, 100);
 }
 
 function stopClock() {
@@ -475,12 +468,6 @@ function populateMetricsFromStats(stats: LiveStats) {
 }
 
 // SYNC: round2 and formatCompact are also defined in worker.ts — cannot share imports across MV3 execution contexts
-const round2 = (v: number) => Math.round(v * 100) / 100;
-
-function formatCompact(n: number): string {
-    if (n >= 1000) return round2(n / 1000) + 'k';
-    return n.toString();
-}
 
 // --- Download Handler (Data-driven averaging) ---
 
@@ -520,25 +507,6 @@ const AVG_FIELDS: AvgField[] = [
     { path: 'mouse_travel.path_efficiency',               round: round2 },
 ];
 
-function getPath(obj: any, path: string): number {
-    const parts = path.split('.');
-    let cur = obj;
-    for (const p of parts) {
-        if (cur == null) return 0;
-        cur = cur[p];
-    }
-    return typeof cur === 'number' ? cur : 0;
-}
-
-function setPath(obj: any, path: string, value: number) {
-    const parts = path.split('.');
-    let cur = obj;
-    for (let i = 0; i < parts.length - 1; i++) {
-        if (cur[parts[i]] == null) cur[parts[i]] = {};
-        cur = cur[parts[i]];
-    }
-    cur[parts[parts.length - 1]] = value;
-}
 
 // --- Averaging Engine (shared by JSON and Markdown export) ---
 
@@ -595,13 +563,6 @@ function buildAveragedReport(runs: BenchmarkReport[]): BenchmarkReport {
 }
 
 // --- Markdown Report Generator ---
-
-function formatDuration(ms: number): string {
-    const secs = Math.floor(ms / 1000);
-    const mins = Math.floor(secs / 60);
-    const remSecs = secs % 60;
-    return mins > 0 ? `${mins}m ${remSecs}s` : `${remSecs}s`;
-}
 
 function generateMarkdownReport(report: BenchmarkReport): string {
     const m = report.metrics;

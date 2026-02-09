@@ -141,7 +141,7 @@ Launched by default when running `compare` or `inspect` interactively.
 -   Schema, Recorder, CLI foundations.
 -   All 9 metrics captured in Recorder (4 content-script collectors).
 -   Multi-run averaging across all metric groups.
--   Vitest test suite (worker + 4 collectors, 72 tests).
+-   Vitest test suite (worker + 4 collectors + side panel utils, 87 tests).
 -   Summary TUI, Fitts drill-down, Radar view.
 -   Welford directional Fitts's Law (approach-angle-aware target width).
 -   Mouse travel tracking with idle/productive segmentation and path efficiency.

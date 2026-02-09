@@ -26,7 +26,8 @@ uxbench/
 │   │   │   └── *.test.ts          # One test file per collector
 │   │   ├── sidepanel/
 │   │   │   ├── index.html         # Terminal-style HUD
-│   │   │   └── app.ts             # UI state, event-driven feed, download averaging
+│   │   │   ├── app.ts             # UI state, event-driven feed, download averaging
+│   │   │   └── utils.ts           # Pure utility functions (formatting, path helpers)
 │   │   └── __mocks__/setup.ts     # Chrome API stubs for vitest
 │   ├── vitest.config.ts
 │   └── package.json
@@ -142,7 +143,7 @@ cd recorder && npm test          # vitest run
 cd recorder && npm run test:watch # vitest (watch mode)
 ```
 
-**Coverage**: 5 test files covering the worker and all 4 collectors (`clicks`, `scroll`, `keyboard`, `mouse-travel`). 72 tests total.
+**Coverage**: 6 test files covering the worker, all 4 collectors (`clicks`, `scroll`, `keyboard`, `mouse-travel`), and side panel utilities. 87 tests total.
 
 ---
 

@@ -10,8 +10,5 @@
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true
     },
-    "include": [
-        "src/**/*",
-        "../schema/benchmark.ts"
-    ]
+    "include": ["src/**/*"]
 }

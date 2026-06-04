@@ -1,10 +1,10 @@
 /// <reference types="chrome"/>
 
-import { ClickCollector } from './clicks';
-import { ScrollCollector } from './scroll';
-import { KeyboardCollector } from './keyboard';
-import { MouseTravelCollector } from './mouse-travel';
-import { BRAND_ORANGE } from './shared';
+import { ClickCollector } from "./clicks";
+import { ScrollCollector } from "./scroll";
+import { KeyboardCollector } from "./keyboard";
+import { MouseTravelCollector } from "./mouse-travel";
+import { BRAND_ORANGE } from "./shared";
 /** Max int32 — ensures overlay renders above all page content */
 const Z_TOP = 2147483647;
 
@@ -60,16 +60,21 @@ class Collector {
     }
 
     private initListeners() {
-        chrome.runtime.onMessage.addListener((message) => {
-            if (message.type === 'RECORDING_STARTED') {
+        chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+            if (message.type === "RECORDING_STARTED") {
                 this.start();
-            } else if (message.type === 'RECORDING_STOPPED') {
-                this.stop();
+            } else if (message.type === "RECORDING_STOPPED") {
+                this.stop().catch(() => undefined);
+            } else if (message.type === "FLUSH_AND_STOP_RECORDING") {
+                this.stop()
+                    .then(() => sendResponse({ ok: true }))
+                    .catch((err) => sendResponse({ ok: false, error: String(err) }));
+                return true;
             }
         });
 
         // Check initial state (handles page load during active recording)
-        chrome.storage.local.get('recordingState').then(({ recordingState }) => {
+        chrome.storage.local.get("recordingState").then(({ recordingState }) => {
             if (recordingState?.isRecording) {
                 this.start();
             }
@@ -79,7 +84,7 @@ class Collector {
     private start() {
         if (this.isRecording) return;
         this.isRecording = true;
-        console.log('UXBench: Recording started');
+        console.log("UXBench: Recording started");
 
         this.addOverlay();
 
@@ -88,33 +93,35 @@ class Collector {
         this.keyboardCollector.attach();
         this.mouseTravelCollector.attach();
         // Wheel listener for context switch tracking (mouse wheel = mouse action)
-        document.addEventListener('wheel', this.wheelHandler, { capture: true, passive: true });
+        document.addEventListener("wheel", this.wheelHandler, { capture: true, passive: true });
     }
 
-    private stop() {
+    private async stop() {
         if (!this.isRecording) return;
         this.isRecording = false;
-        console.log('UXBench: Recording stopped');
+        console.log("UXBench: Recording stopped");
 
         this.removeOverlay();
 
         this.clickCollector.detach();
-        this.scrollCollector.detach();
-        this.keyboardCollector.detach();
-        this.mouseTravelCollector.detach();
-        document.removeEventListener('wheel', this.wheelHandler, { capture: true });
+        document.removeEventListener("wheel", this.wheelHandler, { capture: true });
+        await Promise.all([
+            this.scrollCollector.detach(),
+            this.keyboardCollector.detach(),
+            this.mouseTravelCollector.detach(),
+        ]);
     }
 
     private addOverlay() {
-        const div = document.createElement('div');
-        div.id = 'uxbench-overlay';
+        const div = document.createElement("div");
+        div.id = "uxbench-overlay";
         div.style.cssText = OVERLAY_CSS;
-        div.textContent = 'REC \u25cf';
+        div.textContent = "REC \u25cf";
         document.body.appendChild(div);
     }
 
     private removeOverlay() {
-        const div = document.getElementById('uxbench-overlay');
+        const div = document.getElementById("uxbench-overlay");
         if (div) div.remove();
     }
 }

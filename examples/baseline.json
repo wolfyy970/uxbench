@@ -1,61 +1,107 @@
 {
-    "schema_version": "1.0.0",
-    "source": "uxbench-recorder-v1.0.0",
+    "schema_version": "1.0",
+    "source": "chrome-extension",
     "metadata": {
-        "id": "rec_baseline_001",
-        "timestamp": "2023-10-27T10:00:00Z",
+        "recording_name": "Legacy CRM Baseline",
         "product": "Legacy CRM",
-        "version": "v1.0",
-        "task_name": "Create New Customer",
-        "tags": [
-            "baseline",
-            "legacy"
-        ],
-        "recorder_version": "1.0.0",
-        "url": "https://legacy-crm.example.com/customers/new"
+        "task": "Create New Customer",
+        "url": "https://legacy-crm.example.com/customers/new",
+        "urls_visited": ["https://legacy-crm.example.com/customers/new"],
+        "timestamp": "2026-02-23T10:00:00Z",
+        "duration_ms": 45000,
+        "browser": "Chrome",
+        "source_version": "1.0.0",
+        "operator": "human",
+        "navigation_count": 1,
+        "navigation_gap_ms": 0
     },
     "metrics": {
         "click_count": {
             "total": 12,
-            "breakdown": {
-                "navigation": 4,
-                "input": 6,
-                "action": 2
-            }
+            "productive": 10,
+            "ceremonial": 1,
+            "wasted": 1,
+            "ceremonial_details": [
+                {
+                    "element": "BUTTON#cookie-accept",
+                    "reason": "consent/cookie banner"
+                }
+            ],
+            "wasted_details": [
+                {
+                    "element": "BUTTON#submit",
+                    "reason": "disabled element"
+                }
+            ]
         },
         "time_on_task": {
             "total_ms": 45000,
-            "phases": [
+            "active_ms": 39000,
+            "idle_ms": 6000,
+            "longest_idle_ms": 4200,
+            "longest_idle_after": "Address",
+            "idle_gaps": [
                 {
-                    "name": "navigation",
-                    "duration_ms": 10000
-                },
-                {
-                    "name": "form_entry",
-                    "duration_ms": 30000
-                },
-                {
-                    "name": "submission",
-                    "duration_ms": 5000
+                    "gap_ms": 4200,
+                    "after_action": "Address",
+                    "before_action": "Save"
                 }
             ]
         },
         "fitts": {
-            "average_id": 4.2,
+            "formula": "shannon",
             "cumulative_id": 42.5,
-            "max_id": 5.8
-        },
-        "information_density": {
-            "average_content_ratio": 0.15
+            "average_id": 4.2,
+            "max_id": 5.8,
+            "max_id_element": "Save",
+            "max_id_distance_px": 780,
+            "max_id_target_size": "84x32px",
+            "top_3_hardest": [
+                {
+                    "element": "Save",
+                    "id": 5.8,
+                    "distance_px": 780,
+                    "target_size": "84x32px"
+                }
+            ]
         },
         "context_switches": {
             "total": 8,
-            "ratio": 0.25
+            "ratio": 0.25,
+            "longest_keyboard_streak": 6,
+            "longest_mouse_streak": 3
         },
         "shortcut_coverage": {
-            "shortcuts_used": 0,
-            "ratio": 0.0
+            "shortcuts_used": 0
         },
-        "composite_score": 65.5
-    }
+        "typing_ratio": {
+            "free_text_inputs": 4,
+            "constrained_inputs": 2,
+            "ratio": 0.67,
+            "free_text_fields": ["Name", "Email", "Address", "Notes"]
+        },
+        "scanning_distance": {
+            "method": "euclidean",
+            "cumulative_px": 12500,
+            "average_px": 1250,
+            "max_single_px": 2100,
+            "max_single_from": "Address",
+            "max_single_to": "Save"
+        },
+        "scroll_distance": {
+            "total_px": 2600,
+            "page_scroll_px": 2100,
+            "container_scroll_px": 500,
+            "total_horizontal_px": 0,
+            "scroll_events": 18,
+            "heaviest_container": "customer-form"
+        },
+        "mouse_travel": {
+            "total_px": 16800,
+            "idle_travel_px": 4200,
+            "move_events": 340,
+            "path_efficiency": 0.744
+        }
+    },
+    "action_log": []
 }

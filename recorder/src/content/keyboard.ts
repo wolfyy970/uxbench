@@ -4,7 +4,7 @@
 // We don't maintain a dictionary of known shortcuts — we can't know what shortcuts
 // an arbitrary application supports. Any modifier combo signals keyboard proficiency.
 
-import { NOOP } from './shared';
+import { NOOP } from "./shared";
 
 /** Debounce interval for batching keyboard update messages to the worker */
 const KEYBOARD_DEBOUNCE_MS = 250;
@@ -14,7 +14,7 @@ export class KeyboardCollector {
     private keydownHandler = (e: KeyboardEvent) => this.handleKeydown(e);
     private focusHandler = (e: FocusEvent) => this.handleFocus(e);
 
-    private lastInputMode: 'mouse' | 'keyboard' | null = null;
+    private lastInputMode: "mouse" | "keyboard" | null = null;
     private contextSwitches = 0;
     private totalKeyActions = 0;
     private totalMouseActions = 0;
@@ -32,11 +32,15 @@ export class KeyboardCollector {
     private updateTimer: ReturnType<typeof setTimeout> | null = null;
 
     attach() {
-        document.addEventListener('keydown', this.keydownHandler, this.captureOpts);
-        document.addEventListener('focusin', this.focusHandler, this.captureOpts);
+        this.reset();
+        document.addEventListener("keydown", this.keydownHandler, this.captureOpts);
+        document.addEventListener("focusin", this.focusHandler, this.captureOpts);
     }
 
-    detach() {
+    async detach() {
+        document.removeEventListener("keydown", this.keydownHandler, this.captureOpts);
+        document.removeEventListener("focusin", this.focusHandler, this.captureOpts);
+
         // Finalize current streaks before flushing (recording may end mid-streak)
         this.finalizeStreaks();
 
@@ -45,17 +49,39 @@ export class KeyboardCollector {
             clearTimeout(this.updateTimer);
             this.updateTimer = null;
         }
-        this.sendUpdate();
-        document.removeEventListener('keydown', this.keydownHandler, this.captureOpts);
-        document.removeEventListener('focusin', this.focusHandler, this.captureOpts);
+        if (this.hasData()) {
+            await this.sendUpdate(true);
+        }
+        this.reset();
+    }
+
+    private reset() {
+        if (this.updateTimer) {
+            clearTimeout(this.updateTimer);
+            this.updateTimer = null;
+        }
+        this.lastInputMode = null;
+        this.contextSwitches = 0;
+        this.totalKeyActions = 0;
+        this.totalMouseActions = 0;
+        this.currentKeyboardStreak = 0;
+        this.currentMouseStreak = 0;
+        this.longestKeyboardStreak = 0;
+        this.longestMouseStreak = 0;
+        this.shortcutsUsed = 0;
+        this.freeTextInputs = 0;
+        this.constrainedInputs = 0;
+        this.freeTextFields = [];
+        this.trackedInputs.clear();
+        this.pendingFreeText.clear();
     }
 
     /** Record a mode transition (mouse↔keyboard), updating streaks and context switch count */
-    private recordModeSwitch(newMode: 'mouse' | 'keyboard') {
+    private recordModeSwitch(newMode: "mouse" | "keyboard") {
         if (this.lastInputMode && this.lastInputMode !== newMode) {
             this.contextSwitches += 1;
             // Finalize the ending mode's streak
-            if (this.lastInputMode === 'keyboard') {
+            if (this.lastInputMode === "keyboard") {
                 if (this.currentKeyboardStreak > this.longestKeyboardStreak)
                     this.longestKeyboardStreak = this.currentKeyboardStreak;
                 this.currentKeyboardStreak = 0;
@@ -66,14 +92,13 @@ export class KeyboardCollector {
             }
         }
         // Increment new mode's streak and check longest
-        if (newMode === 'keyboard') {
+        if (newMode === "keyboard") {
             this.currentKeyboardStreak += 1;
             if (this.currentKeyboardStreak > this.longestKeyboardStreak)
                 this.longestKeyboardStreak = this.currentKeyboardStreak;
         } else {
             this.currentMouseStreak += 1;
-            if (this.currentMouseStreak > this.longestMouseStreak)
-                this.longestMouseStreak = this.currentMouseStreak;
+            if (this.currentMouseStreak > this.longestMouseStreak) this.longestMouseStreak = this.currentMouseStreak;
         }
         this.lastInputMode = newMode;
     }
@@ -82,22 +107,21 @@ export class KeyboardCollector {
     private finalizeStreaks() {
         if (this.currentKeyboardStreak > this.longestKeyboardStreak)
             this.longestKeyboardStreak = this.currentKeyboardStreak;
-        if (this.currentMouseStreak > this.longestMouseStreak)
-            this.longestMouseStreak = this.currentMouseStreak;
+        if (this.currentMouseStreak > this.longestMouseStreak) this.longestMouseStreak = this.currentMouseStreak;
     }
 
     // Called by collector.ts when a click happens so we can track mouse→keyboard switches
     notifyMouseAction() {
         this.totalMouseActions += 1;
-        this.recordModeSwitch('mouse');
+        this.recordModeSwitch("mouse");
     }
 
     private handleKeydown(e: KeyboardEvent) {
         // Ignore modifier-only presses
-        if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+        if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
 
         this.totalKeyActions += 1;
-        this.recordModeSwitch('keyboard');
+        this.recordModeSwitch("keyboard");
 
         // Any modifier combo (Ctrl, Cmd, Alt/Option) counts as a shortcut
         if (e.ctrlKey || e.metaKey || e.altKey) {
@@ -125,8 +149,19 @@ export class KeyboardCollector {
         if (target instanceof HTMLInputElement) {
             this.trackedInputs.add(target);
             const type = target.type.toLowerCase();
-            const constrained = ['checkbox', 'radio', 'range', 'color', 'date',
-                'datetime-local', 'month', 'week', 'time', 'file', 'hidden'];
+            const constrained = [
+                "checkbox",
+                "radio",
+                "range",
+                "color",
+                "date",
+                "datetime-local",
+                "month",
+                "week",
+                "time",
+                "file",
+                "hidden",
+            ];
 
             if (constrained.includes(type)) {
                 // Constrained inputs count on focus — focus = interaction (click/change)
@@ -134,16 +169,26 @@ export class KeyboardCollector {
             } else {
                 // Free-text fields: defer counting until actual typing occurs.
                 // Tabbing through a field without typing shouldn't inflate the ratio.
-                const label = (target.labels?.[0]?.textContent?.trim() ||
-                    target.placeholder || target.name || target.id || target.type)
-                    ?.substring(0, 50) || '';
+                const label =
+                    (
+                        target.labels?.[0]?.textContent?.trim() ||
+                        target.placeholder ||
+                        target.name ||
+                        target.id ||
+                        target.type
+                    )?.substring(0, 50) || "";
                 this.pendingFreeText.set(target, label);
             }
         } else if (target instanceof HTMLTextAreaElement) {
             this.trackedInputs.add(target);
-            const label = (target.labels?.[0]?.textContent?.trim() ||
-                target.placeholder || target.name || target.id || 'textarea')
-                ?.substring(0, 50) || '';
+            const label =
+                (
+                    target.labels?.[0]?.textContent?.trim() ||
+                    target.placeholder ||
+                    target.name ||
+                    target.id ||
+                    "textarea"
+                )?.substring(0, 50) || "";
             this.pendingFreeText.set(target, label);
         } else if (target instanceof HTMLSelectElement) {
             this.trackedInputs.add(target);
@@ -159,30 +204,44 @@ export class KeyboardCollector {
         }, KEYBOARD_DEBOUNCE_MS);
     }
 
-    private sendUpdate() {
+    private hasData(): boolean {
+        return (
+            this.totalKeyActions > 0 ||
+            this.totalMouseActions > 0 ||
+            this.shortcutsUsed > 0 ||
+            this.freeTextInputs > 0 ||
+            this.constrainedInputs > 0 ||
+            this.freeTextFields.length > 0
+        );
+    }
+
+    private async sendUpdate(final = false) {
         const totalActions = this.totalKeyActions + this.totalMouseActions;
         const totalInputs = this.freeTextInputs + this.constrainedInputs;
 
-        chrome.runtime.sendMessage({
-            type: 'EVENT_CAPTURED',
-            payload: {
-                type: 'keyboard_update',
-                context_switches: {
-                    total: this.contextSwitches,
-                    ratio: totalActions > 0 ? this.contextSwitches / totalActions : 0,
-                    longest_keyboard_streak: this.longestKeyboardStreak,
-                    longest_mouse_streak: this.longestMouseStreak
+        await chrome.runtime
+            .sendMessage({
+                type: "EVENT_CAPTURED",
+                payload: {
+                    type: "keyboard_update",
+                    final,
+                    context_switches: {
+                        total: this.contextSwitches,
+                        ratio: totalActions > 0 ? this.contextSwitches / totalActions : 0,
+                        longest_keyboard_streak: this.longestKeyboardStreak,
+                        longest_mouse_streak: this.longestMouseStreak,
+                    },
+                    shortcut_coverage: {
+                        shortcuts_used: this.shortcutsUsed,
+                    },
+                    typing_ratio: {
+                        free_text_inputs: this.freeTextInputs,
+                        constrained_inputs: this.constrainedInputs,
+                        ratio: totalInputs > 0 ? this.freeTextInputs / totalInputs : 0,
+                        free_text_fields: this.freeTextFields,
+                    },
                 },
-                shortcut_coverage: {
-                    shortcuts_used: this.shortcutsUsed
-                },
-                typing_ratio: {
-                    free_text_inputs: this.freeTextInputs,
-                    constrained_inputs: this.constrainedInputs,
-                    ratio: totalInputs > 0 ? this.freeTextInputs / totalInputs : 0,
-                    free_text_fields: this.freeTextFields
-                }
-            }
-        }).catch(NOOP);
+            })
+            .catch(NOOP);
     }
 }

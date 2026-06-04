@@ -2,7 +2,7 @@
 // Tracks total cursor distance traveled across the session.
 // Distinct from scanning distance (click-to-click) — this captures the actual path.
 
-import { NOOP } from './shared';
+import { NOOP } from "./shared";
 
 export class MouseTravelCollector {
     private handler = (e: MouseEvent) => this.scheduleUpdate(e);
@@ -25,15 +25,17 @@ export class MouseTravelCollector {
     private lastSendTime = 0;
 
     attach() {
-        document.addEventListener('mousemove', this.handler, { capture: true, passive: true });
+        this.reset();
+        document.addEventListener("mousemove", this.handler, { capture: true, passive: true });
     }
 
-    detach() {
-        document.removeEventListener('mousemove', this.handler, { capture: true });
+    async detach() {
+        document.removeEventListener("mousemove", this.handler, { capture: true });
         if (this.rafId) cancelAnimationFrame(this.rafId);
         // Process any pending position
         if (this.pendingX >= 0) this.processMove(this.pendingX, this.pendingY);
-        this.flush();
+        await this.flush();
+        this.reset();
     }
 
     /** Called by collector.ts when a click is captured — marks current segment as productive travel */
@@ -84,28 +86,44 @@ export class MouseTravelCollector {
         }
     }
 
-    private sendUpdate() {
+    private async sendUpdate() {
         // Idle travel = all previous segments that didn't end with a click + current in-progress segment
         const totalIdle = this.idleTravelPx + this.currentSegmentPx;
 
-        chrome.runtime.sendMessage({
-            type: 'EVENT_CAPTURED',
-            payload: {
-                type: 'mouse_travel_update',
-                total_px: Math.round(this.totalPx),
-                idle_travel_px: Math.round(totalIdle),
-                move_events: this.moveEvents,
-                path_efficiency: null  // computed by the worker from scanning_distance / total travel
-            }
-        }).catch(NOOP);
+        await chrome.runtime
+            .sendMessage({
+                type: "EVENT_CAPTURED",
+                payload: {
+                    type: "mouse_travel_update",
+                    total_px: Math.round(this.totalPx),
+                    idle_travel_px: Math.round(totalIdle),
+                    move_events: this.moveEvents,
+                    path_efficiency: null, // computed by the worker from scanning_distance / total travel
+                },
+            })
+            .catch(NOOP);
     }
 
-    private flush() {
+    private async flush() {
         // Finalize: current segment without a click is idle travel
         this.idleTravelPx += this.currentSegmentPx;
         this.currentSegmentPx = 0;
         if (this.totalPx > 0) {
-            this.sendUpdate();
+            await this.sendUpdate();
         }
+    }
+
+    private reset() {
+        this.lastX = -1;
+        this.lastY = -1;
+        this.pendingX = -1;
+        this.pendingY = -1;
+        this.rafScheduled = false;
+        this.rafId = 0;
+        this.totalPx = 0;
+        this.moveEvents = 0;
+        this.currentSegmentPx = 0;
+        this.idleTravelPx = 0;
+        this.lastSendTime = 0;
     }
 }

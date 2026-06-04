@@ -16,7 +16,6 @@
 README.md (Hub)
 ├── PRODUCT.md        — Feature spec, what exists
 ├── RECORDER_GUIDE.md — How to install and use the Recorder
-├── CLI_GUIDE.md      — How to install and use the Analyzer CLI
 ├── ARCHITECTURE.md   — System design, data flow, technical constraints
 ├── RESEARCHER.md     — Scientific basis, metric methodology
 └── DOCUMENTATION.md  — This file (meta-documentation)
@@ -26,15 +25,14 @@ README.md (Hub)
 
 ## Document Types
 
-| Document | Purpose | Update Trigger |
-|----------|---------|----------------|
-| **README.md** | Entry point, quick start, doc map | Major features |
-| **PRODUCT.md** | Feature source of truth (prevents hallucination) | Feature launches |
-| **RECORDER_GUIDE.md** | Extension install, recording workflow | Recorder UX changes |
-| **CLI_GUIDE.md** | CLI install, TUI usage, report export | Analyzer UX changes |
-| **ARCHITECTURE.md** | System design, module boundaries, data flow | Architecture changes |
-| **RESEARCHER.md** | Scientific methodology, metric definitions | Metric changes |
-| **DOCUMENTATION.md** | Meta: documentation philosophy and rules | Rarely |
+| Document              | Purpose                                          | Update Trigger       |
+| --------------------- | ------------------------------------------------ | -------------------- |
+| **README.md**         | Entry point, quick start, doc map                | Major features       |
+| **PRODUCT.md**        | Feature source of truth (prevents hallucination) | Feature launches     |
+| **RECORDER_GUIDE.md** | Extension install, recording workflow            | Recorder UX changes  |
+| **ARCHITECTURE.md**   | System design, module boundaries, data flow      | Architecture changes |
+| **RESEARCHER.md**     | Scientific methodology, metric definitions       | Metric changes       |
+| **DOCUMENTATION.md**  | Meta: documentation philosophy and rules         | Rarely               |
 
 ---
 
@@ -50,26 +48,28 @@ README.md (Hub)
 
 ## What NOT to Document
 
-- ❌ Standard library/framework behavior (link to official docs)
-- ❌ Obvious code patterns
-- ❌ Extensive templates and examples (one suffices)
-- ❌ Step-by-step tutorials for common operations
-- ❌ Information derivable from reading the code
+-   ❌ Standard library/framework behavior (link to official docs)
+-   ❌ Obvious code patterns
+-   ❌ Extensive templates and examples (one suffices)
+-   ❌ Step-by-step tutorials for common operations
+-   ❌ Information derivable from reading the code
 
 ---
 
 ## Maintenance
 
 **After code changes:**
+
 1. Check which docs are affected
 2. Update or remove outdated content
 3. Verify cross-references still work
 
 **Documentation bloat indicators:**
-- Same information in multiple places
-- Docs describing features that no longer exist
-- Sections beginning with "Note: this is outdated..."
-- Reader can't find information despite docs existing
+
+-   Same information in multiple places
+-   Docs describing features that no longer exist
+-   Sections beginning with "Note: this is outdated..."
+-   Reader can't find information despite docs existing
 
 **Be ruthless:** Delete obsolete content. Consolidate redundant docs. Prefer focused and impactful over comprehensive.
 
@@ -78,7 +78,8 @@ README.md (Hub)
 ## Success Metrics
 
 Documentation is working when:
-- New collaborators understand the project in <10 minutes
-- Getting it running takes <15 minutes
-- Finding specific information takes <2 minutes
-- AI assistants can resume work seamlessly across context windows
+
+-   New collaborators understand the project in <10 minutes
+-   Getting it running takes <15 minutes
+-   Finding specific information takes <2 minutes
+-   AI assistants can resume work seamlessly across context windows

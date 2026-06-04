@@ -6,6 +6,7 @@
 
 interface RecordingState {
     isRecording: boolean;
+    recordingTabId?: number;
     startTime?: number;
     lastClickPosition?: { x: number; y: number } | null;
     lastClickTarget?: string | null;
@@ -24,76 +25,135 @@ interface BenchmarkReport {
 
 interface Metrics {
     click_count: {
-        total: number; productive: number; ceremonial: number; wasted: number;
-        ceremonial_details: DetailEntry[]; wasted_details: DetailEntry[];
+        total: number;
+        productive: number;
+        ceremonial: number;
+        wasted: number;
+        ceremonial_details: DetailEntry[];
+        wasted_details: DetailEntry[];
     };
     time_on_task: {
-        total_ms: number; idle_gaps: IdleGap[];
-        idle_ms?: number; active_ms?: number; longest_idle_ms?: number; longest_idle_after?: string;
+        total_ms: number;
+        idle_gaps: IdleGap[];
+        idle_ms?: number;
+        active_ms?: number;
+        longest_idle_ms?: number;
+        longest_idle_after?: string;
     };
     fitts: {
-        formula: string; cumulative_id: number; average_id: number;
-        max_id: number; max_id_element: string; max_id_distance_px: number;
-        max_id_target_size: string; top_3_hardest: FittsEntry[];
+        formula: string;
+        cumulative_id: number;
+        average_id: number;
+        max_id: number;
+        max_id_element: string;
+        max_id_distance_px: number;
+        max_id_target_size: string;
+        top_3_hardest: FittsEntry[];
     };
     context_switches: {
-        total: number; ratio: number;
-        longest_keyboard_streak?: number; longest_mouse_streak?: number;
+        total: number;
+        ratio: number;
+        longest_keyboard_streak?: number;
+        longest_mouse_streak?: number;
     };
     shortcut_coverage: {
         shortcuts_used: number;
     };
     typing_ratio: {
-        free_text_inputs: number; constrained_inputs: number;
-        ratio: number; free_text_fields: string[];
+        free_text_inputs: number;
+        constrained_inputs: number;
+        ratio: number;
+        free_text_fields: string[];
     };
     scanning_distance: {
-        method: string; cumulative_px: number;
-        average_px: number; max_single_px: number;
-        max_single_from?: string; max_single_to?: string;
+        method: string;
+        cumulative_px: number;
+        average_px: number;
+        max_single_px: number;
+        max_single_from?: string;
+        max_single_to?: string;
     };
     scroll_distance: {
-        total_px: number; page_scroll_px?: number; container_scroll_px?: number;
-        total_horizontal_px?: number; scroll_events?: number; heaviest_container?: string;
+        total_px: number;
+        page_scroll_px?: number;
+        container_scroll_px?: number;
+        total_horizontal_px?: number;
+        scroll_events?: number;
+        heaviest_container?: string;
     };
     mouse_travel: {
-        total_px: number; idle_travel_px: number; move_events: number;
+        total_px: number;
+        idle_travel_px: number;
+        move_events: number;
         path_efficiency: number | null;
     };
-    composite_score: number;
 }
 
-interface DetailEntry { element: string; reason: string; }
-interface IdleGap { gap_ms: number; after_action: string; before_action: string; _emitted?: boolean; }
-interface FittsEntry { element: string; id: number; distance_px: number; target_size: string; }
-interface ActionLogEntry { type: string; timestamp: number; target: string; text: string; classification: string; }
+interface DetailEntry {
+    element: string;
+    reason: string;
+}
+interface IdleGap {
+    gap_ms: number;
+    after_action: string;
+    before_action: string;
+    _emitted?: boolean;
+}
+interface FittsEntry {
+    element: string;
+    id: number;
+    distance_px: number;
+    target_size: string;
+}
+interface ActionLogEntry {
+    type: string;
+    timestamp: number;
+    target: string;
+    text: string;
+    classification: string;
+}
 
 interface ClickPayload {
-    type: 'click'; timestamp: number; x: number; y: number;
-    classification?: string; classificationReason?: string;
+    type: "click";
+    timestamp: number;
+    x: number;
+    y: number;
+    classification?: string;
+    classificationReason?: string;
     target: { tagName: string; id?: string; innerText?: string; rect: { width: number; height: number } };
 }
 interface ScrollPayload {
-    type: 'scroll_update'; total_px: number; page_scroll_px: number;
-    container_scroll_px: number; total_horizontal_px?: number;
-    scroll_events: number; heaviest_container?: string;
+    type: "scroll_update";
+    total_px: number;
+    page_scroll_px: number;
+    container_scroll_px: number;
+    total_horizontal_px?: number;
+    scroll_events: number;
+    heaviest_container?: string;
 }
 interface KeyboardPayload {
-    type: 'keyboard_update';
+    type: "keyboard_update";
+    final?: boolean;
     context_switches: { total: number; ratio: number; longest_keyboard_streak: number; longest_mouse_streak: number };
     shortcut_coverage: { shortcuts_used: number };
     typing_ratio: { free_text_inputs: number; constrained_inputs: number; ratio: number; free_text_fields: string[] };
 }
 interface MouseTravelPayload {
-    type: 'mouse_travel_update'; total_px: number; idle_travel_px: number;
-    move_events: number; path_efficiency: number | null;
+    type: "mouse_travel_update";
+    total_px: number;
+    idle_travel_px: number;
+    move_events: number;
+    path_efficiency: number | null;
 }
 
 type EventPayload = ClickPayload | ScrollPayload | KeyboardPayload | MouseTravelPayload;
 
 interface FeedEvent {
-    id: number; ts: number; type: string;
-    label: string; detail?: string;
+    id: number;
+    ts: number;
+    type: string;
+    label: string;
+    detail?: string;
     metricUpdates: Record<string, { value: string }>;
 }
 
@@ -110,7 +170,7 @@ interface MetricFormatDef {
 const NOOP = () => {};
 
 /** Brand accent color — SYNC: content/shared.ts and index.html --ds-orange */
-const BRAND_ORANGE = '#EE6019';
+const BRAND_ORANGE = "#EE6019";
 
 // Named constants for magic numbers used in event processing
 const IDLE_GAP_MS = 3000;
@@ -119,18 +179,16 @@ const SCROLL_FEED_THROTTLE_MS = 500;
 
 /** Format functions for each metric key — used by buildMetricSnapshot for live display values */
 const METRIC_FORMATS: Record<string, MetricFormatDef> = {
-    clicks:    { format: v => v.toString() },
-    scroll:    { format: v => formatCompact(Math.round(v)) },
-    fitts:     { format: v => round2(v).toString() },
-    switches:  { format: v => v.toString() },
-    shortcuts: { format: v => v.toString() },
-    typing:    { format: v => round2(v).toString() },
-    scanAvg:   { format: v => Math.round(v).toString() },
-    travel:    { format: v => formatCompact(Math.round(v)) },
-    gaps:      { format: v => v.toString() },
-    cost:      { format: v => v.toString() },
+    clicks: { format: (v) => v.toString() },
+    scroll: { format: (v) => formatCompact(Math.round(v)) },
+    fitts: { format: (v) => round2(v).toString() },
+    switches: { format: (v) => v.toString() },
+    shortcuts: { format: (v) => v.toString() },
+    typing: { format: (v) => round2(v).toString() },
+    scanAvg: { format: (v) => Math.round(v).toString() },
+    travel: { format: (v) => formatCompact(Math.round(v)) },
+    gaps: { format: (v) => v.toString() },
 };
-
 
 // ========================================================
 // Shared utilities
@@ -140,53 +198,42 @@ const METRIC_FORMATS: Record<string, MetricFormatDef> = {
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
 function formatCompact(n: number): string {
-    if (n >= 1000) return round2(n / 1000) + 'k';
+    if (n >= 1000) return round2(n / 1000) + "k";
     return n.toString();
-}
-
-/**
- * Composite score weights. Each coefficient normalizes its metric's contribution
- * so that a score of ~25 represents moderate UX friction.
- */
-const COMPOSITE_WEIGHTS = {
-    switches: 1.5,    // each input mode switch = moderate friction
-    fitts: 1.0,       // cumulative Fitts ID bits, direct pass-through
-    scrollPx: 0.005,  // 200px scroll ≈ 1 point
-} as const;
-
-function computeComposite(m: Metrics): number {
-    return (m.context_switches.total * COMPOSITE_WEIGHTS.switches) +
-        (m.fitts.cumulative_id * COMPOSITE_WEIGHTS.fitts) +
-        (m.scroll_distance.total_px * COMPOSITE_WEIGHTS.scrollPx);
 }
 
 /** Read raw metric value for a given metric key */
 function readMetric(m: Metrics, key: string): number {
     switch (key) {
-        case 'clicks':    return m.click_count.total;
-        case 'scroll':    return m.scroll_distance.total_px;
-        case 'fitts':     return m.fitts.average_id;
-        case 'switches':  return m.context_switches.total;
-        case 'shortcuts': return m.shortcut_coverage.shortcuts_used;
-        case 'typing':    return m.typing_ratio.ratio;
-        case 'scanAvg':   return m.scanning_distance.average_px;
-        case 'travel':    return m.mouse_travel.total_px;
-        case 'gaps':      return m.time_on_task.idle_gaps.length;
-        case 'cost':      return 0; // handled separately
-        default:          return 0;
+        case "clicks":
+            return m.click_count.total;
+        case "scroll":
+            return m.scroll_distance.total_px;
+        case "fitts":
+            return m.fitts.average_id;
+        case "switches":
+            return m.context_switches.total;
+        case "shortcuts":
+            return m.shortcut_coverage.shortcuts_used;
+        case "typing":
+            return m.typing_ratio.ratio;
+        case "scanAvg":
+            return m.scanning_distance.average_px;
+        case "travel":
+            return m.mouse_travel.total_px;
+        case "gaps":
+            return m.time_on_task.idle_gaps.length;
+        default:
+            return 0;
     }
 }
 
 /** Build metric snapshot for all metrics (used by FEED_EVENT) */
-function buildMetricSnapshot(m: Metrics, composite: number): Record<string, { value: string }> {
+function buildMetricSnapshot(m: Metrics): Record<string, { value: string }> {
     const snapshot: Record<string, { value: string }> = {};
     for (const key of Object.keys(METRIC_FORMATS)) {
-        if (key === 'cost') {
-            snapshot[key] = { value: composite.toString() };
-        } else {
-            const raw = readMetric(m, key);
-            snapshot[key] = { value: METRIC_FORMATS[key].format(raw) };
-        }
+        const raw = readMetric(m, key);
+        snapshot[key] = { value: METRIC_FORMATS[key].format(raw) };
     }
     return snapshot;
 }
@@ -220,8 +267,8 @@ chrome.runtime.onInstalled.addListener(() => {
 // ========================================================
 
 chrome.commands.onCommand.addListener(async (command) => {
-    if (command === 'toggle-recording') {
-        const { recordingState } = await chrome.storage.local.get('recordingState');
+    if (command === "toggle-recording") {
+        const { recordingState } = await chrome.storage.local.get("recordingState");
         if (recordingState?.isRecording) {
             stopRecording();
         } else {
@@ -235,13 +282,17 @@ chrome.commands.onCommand.addListener(async (command) => {
 // ========================================================
 
 chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
-    if (message.type === 'START_RECORDING' && !isTransitioning) {
+    if (message.type === "START_RECORDING" && !isTransitioning) {
         isTransitioning = true;
-        startRecording().finally(() => { isTransitioning = false; });
-    } else if (message.type === 'STOP_RECORDING' && !isTransitioning) {
+        startRecording().finally(() => {
+            isTransitioning = false;
+        });
+    } else if (message.type === "STOP_RECORDING" && !isTransitioning) {
         isTransitioning = true;
-        stopRecording().finally(() => { isTransitioning = false; });
-    } else if (message.type === 'EVENT_CAPTURED') {
+        stopRecording().finally(() => {
+            isTransitioning = false;
+        });
+    } else if (message.type === "EVENT_CAPTURED") {
         handleEvent(message.payload);
     }
 });
@@ -251,64 +302,78 @@ chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
 // ========================================================
 
 async function startRecording() {
-    console.log('UXBench: Starting recording...');
+    console.log("UXBench: Starting recording...");
 
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const now = Date.now();
 
     const state: RecordingState = {
         isRecording: true,
+        recordingTabId: tab?.id,
         startTime: now,
         lastClickPosition: null,
         lastClickTarget: null,
         lastActionTime: now,
         lastActionLabel: null,
         currentRecording: {
-            schema_version: '1.0',
-            source: 'chrome-extension',
+            schema_version: "1.0",
+            source: "chrome-extension",
             metadata: {
-                recording_name: '',
-                product: '',
-                task: '',
-                url: tab?.url || '',
+                recording_name: "",
+                product: "",
+                task: "",
+                url: tab?.url || "",
                 urls_visited: tab?.url ? [tab.url] : [],
                 timestamp: new Date(now).toISOString(),
                 duration_ms: 0,
                 browser: navigator.userAgent,
-                source_version: '1.0.0',
-                operator: 'human',
+                source_version: "1.0.0",
+                operator: "human",
                 navigation_count: 0,
-                navigation_gap_ms: 0
+                navigation_gap_ms: 0,
             },
             metrics: {
                 click_count: {
-                    total: 0, productive: 0, ceremonial: 0, wasted: 0,
-                    ceremonial_details: [], wasted_details: []
+                    total: 0,
+                    productive: 0,
+                    ceremonial: 0,
+                    wasted: 0,
+                    ceremonial_details: [],
+                    wasted_details: [],
                 },
                 time_on_task: {
-                    total_ms: 0, idle_gaps: []
+                    total_ms: 0,
+                    idle_gaps: [],
                 },
                 fitts: {
-                    formula: 'shannon', cumulative_id: 0, average_id: 0,
-                    max_id: 0, max_id_element: '', max_id_distance_px: 0,
-                    max_id_target_size: '', top_3_hardest: []
+                    formula: "shannon",
+                    cumulative_id: 0,
+                    average_id: 0,
+                    max_id: 0,
+                    max_id_element: "",
+                    max_id_distance_px: 0,
+                    max_id_target_size: "",
+                    top_3_hardest: [],
                 },
                 context_switches: { total: 0, ratio: 0 },
                 shortcut_coverage: { shortcuts_used: 0 },
                 typing_ratio: {
-                    free_text_inputs: 0, constrained_inputs: 0,
-                    ratio: 0, free_text_fields: []
+                    free_text_inputs: 0,
+                    constrained_inputs: 0,
+                    ratio: 0,
+                    free_text_fields: [],
                 },
                 scanning_distance: {
-                    method: 'euclidean', cumulative_px: 0,
-                    average_px: 0, max_single_px: 0
+                    method: "euclidean",
+                    cumulative_px: 0,
+                    average_px: 0,
+                    max_single_px: 0,
                 },
                 scroll_distance: { total_px: 0 },
                 mouse_travel: { total_px: 0, idle_travel_px: 0, move_events: 0, path_efficiency: null },
-                composite_score: 0
             },
-            action_log: []
-        }
+            action_log: [],
+        },
     };
 
     // Reset feed state
@@ -323,7 +388,7 @@ async function startRecording() {
     await chrome.storage.local.set({
         recordingState: state,
         stats: null,
-        benchmarkReport: null
+        benchmarkReport: null,
     });
 
     // Ensure content script is present, then notify it.
@@ -334,32 +399,46 @@ async function startRecording() {
         try {
             await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
-                files: ['content-script.js']
+                files: ["content-script.js"],
             });
-        } catch { /* chrome:// pages, etc. — content script cannot be injected */ }
-        chrome.tabs.sendMessage(tab.id, { type: 'RECORDING_STARTED' }).catch(NOOP);
+        } catch {
+            /* chrome:// pages, etc. — content script cannot be injected */
+        }
+        chrome.tabs.sendMessage(tab.id, { type: "RECORDING_STARTED" }).catch(NOOP);
     }
 
     // Badge (only if action is configured in manifest)
     if (chrome.action) {
-        chrome.action.setBadgeText({ text: 'REC' }).catch(NOOP);
+        chrome.action.setBadgeText({ text: "REC" }).catch(NOOP);
         chrome.action.setBadgeBackgroundColor({ color: BRAND_ORANGE }).catch(NOOP);
     }
 
     // Notify side panel and other extension pages
-    chrome.runtime.sendMessage({ type: 'RECORDING_STARTED' }).catch(NOOP);
+    chrome.runtime.sendMessage({ type: "RECORDING_STARTED" }).catch(NOOP);
 }
 
 async function stopRecording() {
-    console.log('UXBench: Stopping recording...');
-    const { recordingState } = await chrome.storage.local.get('recordingState');
+    console.log("UXBench: Stopping recording...");
+    const { recordingState } = await chrome.storage.local.get("recordingState");
     if (!recordingState?.isRecording) return;
 
+    const recordingTabId = await getRecordingTabId(recordingState);
+    if (recordingTabId !== undefined) {
+        await flushAndStopContentScript(recordingTabId);
+    }
+
+    // Content-script flushes send EVENT_CAPTURED messages back through the same worker queue.
+    // Drain it before building the final report so trailing keyboard/mouse/scroll data is included.
+    await eventQueue;
+
+    const { recordingState: latestState } = await chrome.storage.local.get("recordingState");
+    if (!latestState?.isRecording) return;
+
     // Calculate duration
-    const duration = Date.now() - (recordingState.startTime || Date.now());
+    const duration = Date.now() - (latestState.startTime || Date.now());
 
     // Build the final benchmark report
-    const report = recordingState.currentRecording as BenchmarkReport | undefined;
+    const report = latestState.currentRecording as BenchmarkReport | undefined;
     if (report) {
         report.metadata.duration_ms = duration;
         report.metrics.time_on_task.total_ms = duration;
@@ -370,13 +449,10 @@ async function stopRecording() {
         report.metrics.time_on_task.idle_ms = totalGapMs;
         report.metrics.time_on_task.active_ms = duration - totalGapMs;
         if (gaps.length > 0) {
-            const longestGap = gaps.reduce((max: IdleGap, g: IdleGap) => g.gap_ms > max.gap_ms ? g : max, gaps[0]);
+            const longestGap = gaps.reduce((max: IdleGap, g: IdleGap) => (g.gap_ms > max.gap_ms ? g : max), gaps[0]);
             report.metrics.time_on_task.longest_idle_ms = longestGap.gap_ms;
             report.metrics.time_on_task.longest_idle_after = longestGap.after_action;
         }
-
-        // Composite score (single source: computeComposite)
-        report.metrics.composite_score = computeComposite(report.metrics);
     }
 
     // Mark recording as stopped
@@ -387,22 +463,38 @@ async function stopRecording() {
     await chrome.storage.local.set({
         recordingState: finalState,
         benchmarkReport: report || null,
-        stats: null
+        stats: null,
     });
 
-    // Notify content script
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { type: 'RECORDING_STOPPED' }).catch(NOOP);
+    // Notify content script. It may already be stopped by the flush request; this is harmless
+    // and keeps older content scripts compatible.
+    if (recordingTabId !== undefined) {
+        chrome.tabs.sendMessage(recordingTabId, { type: "RECORDING_STOPPED" }).catch(NOOP);
     }
 
     // Clear badge (only if action is configured in manifest)
     if (chrome.action) {
-        chrome.action.setBadgeText({ text: '' }).catch(NOOP);
+        chrome.action.setBadgeText({ text: "" }).catch(NOOP);
     }
 
     // Notify side panel and other extension pages
-    chrome.runtime.sendMessage({ type: 'RECORDING_STOPPED' }).catch(NOOP);
+    chrome.runtime.sendMessage({ type: "RECORDING_STOPPED" }).catch(NOOP);
+}
+
+async function getRecordingTabId(recordingState: RecordingState): Promise<number | undefined> {
+    if (recordingState.recordingTabId !== undefined) return recordingState.recordingTabId;
+
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tab?.id;
+}
+
+async function flushAndStopContentScript(tabId: number): Promise<void> {
+    try {
+        await chrome.tabs.sendMessage(tabId, { type: "FLUSH_AND_STOP_RECORDING" });
+    } catch {
+        // Pages like chrome:// may not have an injectable content script. Finalize the report
+        // with whatever data the worker already has.
+    }
 }
 
 // ========================================================
@@ -412,7 +504,9 @@ async function stopRecording() {
 let eventQueue: Promise<void> = Promise.resolve();
 
 function handleEvent(payload: EventPayload) {
-    eventQueue = eventQueue.then(() => handleEventInternal(payload)).catch(e => console.error('UXBench event error:', e));
+    eventQueue = eventQueue
+        .then(() => handleEventInternal(payload))
+        .catch((e) => console.error("UXBench event error:", e));
 }
 
 // ========================================================
@@ -423,13 +517,16 @@ function detectIdleGap(recording: BenchmarkReport, payload: EventPayload, record
     if (recordingState.lastActionTime) {
         const gap = now - recordingState.lastActionTime;
         if (gap > IDLE_GAP_MS) {
-            const actionLabel = payload.type === 'click'
-                ? ((payload as ClickPayload).target?.innerText?.substring(0, 40) || (payload as ClickPayload).target?.tagName || 'click')
-                : payload.type;
+            const actionLabel =
+                payload.type === "click"
+                    ? (payload as ClickPayload).target?.innerText?.substring(0, 40) ||
+                      (payload as ClickPayload).target?.tagName ||
+                      "click"
+                    : payload.type;
             recording.metrics.time_on_task.idle_gaps.push({
                 gap_ms: gap,
-                after_action: recordingState.lastActionLabel || 'start',
-                before_action: actionLabel
+                after_action: recordingState.lastActionLabel || "start",
+                before_action: actionLabel,
             });
         }
     }
@@ -439,14 +536,14 @@ function detectIdleGap(recording: BenchmarkReport, payload: EventPayload, record
 /** Classify click and update click_count buckets */
 function classifyAndCount(m: Metrics, payload: ClickPayload) {
     m.click_count.total += 1;
-    const elLabel = payload.target.tagName + (payload.target.id ? '#' + payload.target.id : '');
+    const elLabel = payload.target.tagName + (payload.target.id ? "#" + payload.target.id : "");
 
-    if (payload.classification === 'wasted') {
+    if (payload.classification === "wasted") {
         m.click_count.wasted += 1;
         if (payload.classificationReason) {
             m.click_count.wasted_details.push({ element: elLabel, reason: payload.classificationReason });
         }
-    } else if (payload.classification === 'ceremonial') {
+    } else if (payload.classification === "ceremonial") {
         m.click_count.ceremonial += 1;
         if (payload.classificationReason) {
             m.click_count.ceremonial_details.push({ element: elLabel, reason: payload.classificationReason });
@@ -457,7 +554,12 @@ function classifyAndCount(m: Metrics, payload: ClickPayload) {
 }
 
 /** Compute scanning distance + Fitts ID between consecutive clicks, update averages */
-function computeFittsAndScanning(m: Metrics, payload: ClickPayload, clickTarget: string, recordingState: RecordingState) {
+function computeFittsAndScanning(
+    m: Metrics,
+    payload: ClickPayload,
+    clickTarget: string,
+    recordingState: RecordingState,
+) {
     if (recordingState.lastClickPosition) {
         const dx = payload.x - recordingState.lastClickPosition.x;
         const dy = payload.y - recordingState.lastClickPosition.y;
@@ -466,7 +568,7 @@ function computeFittsAndScanning(m: Metrics, payload: ClickPayload, clickTarget:
         m.scanning_distance.cumulative_px += distance;
         if (distance > m.scanning_distance.max_single_px) {
             m.scanning_distance.max_single_px = distance;
-            m.scanning_distance.max_single_from = recordingState.lastClickTarget || 'unknown';
+            m.scanning_distance.max_single_from = recordingState.lastClickTarget || "unknown";
             m.scanning_distance.max_single_to = clickTarget;
         }
 
@@ -486,8 +588,10 @@ function computeFittsAndScanning(m: Metrics, payload: ClickPayload, clickTarget:
 
             // Maintain top 3 hardest targets
             m.fitts.top_3_hardest.push({
-                element: clickTarget, id, distance_px: distance,
-                target_size: `${Math.round(rect.width)}x${Math.round(rect.height)}px`
+                element: clickTarget,
+                id,
+                distance_px: distance,
+                target_size: `${Math.round(rect.width)}x${Math.round(rect.height)}px`,
             });
             m.fitts.top_3_hardest.sort((a, b) => b.id - a.id);
             if (m.fitts.top_3_hardest.length > 3) {
@@ -512,9 +616,9 @@ function appendActionLog(recording: BenchmarkReport, payload: ClickPayload) {
     recording.action_log.push({
         type: payload.type,
         timestamp: payload.timestamp,
-        target: payload.target.tagName + (payload.target.id ? '#' + payload.target.id : ''),
-        text: payload.target.innerText || '',
-        classification: payload.classification || 'productive'
+        target: payload.target.tagName + (payload.target.id ? "#" + payload.target.id : ""),
+        text: payload.target.innerText || "",
+        classification: payload.classification || "productive",
     });
     if (recording.action_log.length > ACTION_LOG_MAX) {
         recording.action_log = recording.action_log.slice(-ACTION_LOG_MAX);
@@ -522,7 +626,7 @@ function appendActionLog(recording: BenchmarkReport, payload: ClickPayload) {
 }
 
 function processClickEvent(recording: BenchmarkReport, payload: ClickPayload, recordingState: RecordingState): boolean {
-    const clickTarget = payload.target?.innerText?.substring(0, 40) || payload.target?.tagName || 'click';
+    const clickTarget = payload.target?.innerText?.substring(0, 40) || payload.target?.tagName || "click";
     recordingState.lastActionLabel = clickTarget;
 
     classifyAndCount(recording.metrics, payload);
@@ -542,8 +646,12 @@ function processScrollEvent(recording: BenchmarkReport, payload: ScrollPayload):
     return true;
 }
 
-function processKeyboardEvent(recording: BenchmarkReport, payload: KeyboardPayload, recordingState: RecordingState): boolean {
-    recordingState.lastActionLabel = 'keyboard';
+function processKeyboardEvent(
+    recording: BenchmarkReport,
+    payload: KeyboardPayload,
+    recordingState: RecordingState,
+): boolean {
+    recordingState.lastActionLabel = "keyboard";
 
     const cs = payload.context_switches;
     recording.metrics.context_switches.total = cs.total;
@@ -571,9 +679,7 @@ function processMouseTravelEvent(recording: BenchmarkReport, payload: MouseTrave
     // Path efficiency: straight-line scanning distance / actual cursor travel
     const scan = recording.metrics.scanning_distance.cumulative_px;
     recording.metrics.mouse_travel.path_efficiency =
-        (payload.total_px > 0 && scan > 0)
-            ? Math.round((scan / payload.total_px) * 1000) / 1000
-            : null;
+        payload.total_px > 0 && scan > 0 ? Math.round((scan / payload.total_px) * 1000) / 1000 : null;
 
     return prev !== payload.total_px;
 }
@@ -583,14 +689,17 @@ function processMouseTravelEvent(recording: BenchmarkReport, payload: MouseTrave
 // ========================================================
 
 async function handleEventInternal(payload: EventPayload) {
-    const { recordingState } = await chrome.storage.local.get('recordingState');
+    const { recordingState } = await chrome.storage.local.get("recordingState");
     if (!recordingState?.isRecording || !recordingState.currentRecording) return;
 
     const recording = recordingState.currentRecording as BenchmarkReport;
     const now = (payload as ClickPayload).timestamp || Date.now();
 
     // Idle gap detection — only for user-initiated actions (not passive sensors like mouse_travel)
-    const isUserAction = payload.type === 'click' || payload.type === 'keyboard_update' || payload.type === 'scroll_update';
+    const isUserAction =
+        payload.type === "click" ||
+        (payload.type === "keyboard_update" && !(payload as KeyboardPayload).final) ||
+        payload.type === "scroll_update";
     if (isUserAction) {
         detectIdleGap(recording, payload, recordingState, now);
     }
@@ -598,39 +707,44 @@ async function handleEventInternal(payload: EventPayload) {
     // Dispatch to per-type processor
     let stateChanged = false;
     switch (payload.type) {
-        case 'click':          stateChanged = processClickEvent(recording, payload as ClickPayload, recordingState); break;
-        case 'scroll_update':  stateChanged = processScrollEvent(recording, payload as ScrollPayload); break;
-        case 'keyboard_update': stateChanged = processKeyboardEvent(recording, payload as KeyboardPayload, recordingState); break;
-        case 'mouse_travel_update': stateChanged = processMouseTravelEvent(recording, payload as MouseTravelPayload); break;
+        case "click":
+            stateChanged = processClickEvent(recording, payload as ClickPayload, recordingState);
+            break;
+        case "scroll_update":
+            stateChanged = processScrollEvent(recording, payload as ScrollPayload);
+            break;
+        case "keyboard_update":
+            stateChanged = processKeyboardEvent(recording, payload as KeyboardPayload, recordingState);
+            break;
+        case "mouse_travel_update":
+            stateChanged = processMouseTravelEvent(recording, payload as MouseTravelPayload);
+            break;
     }
 
     if (!stateChanged) return;
 
-    // Live composite score (single source: computeComposite)
     const m = recording.metrics;
-    const compositeRounded = Math.round(computeComposite(m) * 10) / 10;
 
     // Build comprehensive stats for recovery (side panel opening mid-recording)
     const stats = {
         clicks: m.click_count.total,
         scroll: Math.round(m.scroll_distance.total_px),
         switches: m.context_switches.total,
-        composite: compositeRounded,
         fitts: round2(m.fitts.average_id),
         shortcuts: m.shortcut_coverage.shortcuts_used,
         typing: round2(m.typing_ratio.ratio),
         scanAvg: Math.round(m.scanning_distance.average_px),
         travel: Math.round(m.mouse_travel.total_px),
-        gaps: m.time_on_task.idle_gaps.length
+        gaps: m.time_on_task.idle_gaps.length,
     };
 
     // Write updated recording state and all metric stats
     await chrome.storage.local.set({ recordingState, stats });
 
     // Build and broadcast FEED_EVENT for real-time side panel updates
-    const feedEvent = buildFeedEvent(payload, m, compositeRounded, now);
+    const feedEvent = buildFeedEvent(payload, m, now);
     if (feedEvent) {
-        chrome.runtime.sendMessage({ type: 'FEED_EVENT', event: feedEvent }).catch(NOOP);
+        chrome.runtime.sendMessage({ type: "FEED_EVENT", event: feedEvent }).catch(NOOP);
     }
 }
 
@@ -638,26 +752,43 @@ async function handleEventInternal(payload: EventPayload) {
 // Feed event builders — one per event type (R14: dispatch table)
 // ========================================================
 
-type FeedBuilderFn = (payload: EventPayload, m: Metrics, id: number, ts: number,
-    metricUpdates: Record<string, { value: string }>) => FeedEvent | null;
+type FeedBuilderFn = (
+    payload: EventPayload,
+    m: Metrics,
+    id: number,
+    ts: number,
+    metricUpdates: Record<string, { value: string }>,
+) => FeedEvent | null;
 
-function buildClickFeed(payload: EventPayload, m: Metrics, id: number, ts: number,
-    metricUpdates: Record<string, { value: string }>): FeedEvent {
+function buildClickFeed(
+    payload: EventPayload,
+    m: Metrics,
+    id: number,
+    ts: number,
+    metricUpdates: Record<string, { value: string }>,
+): FeedEvent {
     const p = payload as ClickPayload;
-    const tag = p.target?.tagName || 'EL';
-    const elId = p.target?.id ? '#' + p.target.id : '';
-    const text = p.target?.innerText?.substring(0, 25) || '';
-    const cls = p.classification || 'productive';
+    const tag = p.target?.tagName || "EL";
+    const elId = p.target?.id ? "#" + p.target.id : "";
+    const text = p.target?.innerText?.substring(0, 25) || "";
+    const cls = p.classification || "productive";
     return {
-        id, ts, type: 'click',
+        id,
+        ts,
+        type: "click",
         label: `CLICK ${tag}${elId} (${m.click_count.total})`,
-        detail: cls !== 'productive' ? `${cls}: ${p.classificationReason || text}` : text,
-        metricUpdates
+        detail: cls !== "productive" ? `${cls}: ${p.classificationReason || text}` : text,
+        metricUpdates,
     };
 }
 
-function buildScrollFeed(payload: EventPayload, _m: Metrics, id: number, ts: number,
-    metricUpdates: Record<string, { value: string }>): FeedEvent | null {
+function buildScrollFeed(
+    payload: EventPayload,
+    _m: Metrics,
+    id: number,
+    ts: number,
+    metricUpdates: Record<string, { value: string }>,
+): FeedEvent | null {
     const scrollNow = Date.now();
     if (scrollNow - lastScrollFeedTime < SCROLL_FEED_THROTTLE_MS) return null;
     lastScrollFeedTime = scrollNow;
@@ -666,28 +797,42 @@ function buildScrollFeed(payload: EventPayload, _m: Metrics, id: number, ts: num
     const delta = Math.round(total - lastScrollTotal);
     lastScrollTotal = total;
     return {
-        id, ts, type: 'scroll',
+        id,
+        ts,
+        type: "scroll",
         label: `SCROLL +${formatCompact(delta)}px (${formatCompact(Math.round(total))})`,
-        metricUpdates
+        metricUpdates,
     };
 }
 
-function buildKeyboardFeed(_payload: EventPayload, m: Metrics, id: number, ts: number,
-    metricUpdates: Record<string, { value: string }>): FeedEvent {
+function buildKeyboardFeed(
+    _payload: EventPayload,
+    m: Metrics,
+    id: number,
+    ts: number,
+    metricUpdates: Record<string, { value: string }>,
+): FeedEvent {
     const parts: string[] = [];
     if (m.context_switches.total > 0) parts.push(`${m.context_switches.total} switches`);
     if (m.shortcut_coverage.shortcuts_used > 0) parts.push(`${m.shortcut_coverage.shortcuts_used} shortcuts`);
     const totalActions = m.context_switches.total + m.shortcut_coverage.shortcuts_used;
     return {
-        id, ts, type: 'keyboard',
-        label: `KEYBOARD${totalActions > 0 ? ' (' + totalActions + ')' : ''}`,
-        detail: parts.length > 0 ? parts.join(', ') : undefined,
-        metricUpdates
+        id,
+        ts,
+        type: "keyboard",
+        label: `KEYBOARD${totalActions > 0 ? " (" + totalActions + ")" : ""}`,
+        detail: parts.length > 0 ? parts.join(", ") : undefined,
+        metricUpdates,
     };
 }
 
-function buildMouseTravelFeed(_payload: EventPayload, m: Metrics, id: number, ts: number,
-    metricUpdates: Record<string, { value: string }>): FeedEvent | null {
+function buildMouseTravelFeed(
+    _payload: EventPayload,
+    m: Metrics,
+    id: number,
+    ts: number,
+    metricUpdates: Record<string, { value: string }>,
+): FeedEvent | null {
     const travelNow = Date.now();
     if (travelNow - lastTravelFeedTime < SCROLL_FEED_THROTTLE_MS) return null;
     lastTravelFeedTime = travelNow;
@@ -696,30 +841,32 @@ function buildMouseTravelFeed(_payload: EventPayload, m: Metrics, id: number, ts
     const delta = Math.round(total - lastTravelTotal);
     lastTravelTotal = total;
     return {
-        id, ts, type: 'mouse_travel',
+        id,
+        ts,
+        type: "mouse_travel",
         label: `TRAVEL +${formatCompact(delta)}px (${formatCompact(Math.round(total))})`,
-        metricUpdates
+        metricUpdates,
     };
 }
 
 /** Dispatch table: event type → feed label builder */
 const FEED_BUILDERS: Record<string, FeedBuilderFn> = {
-    'click':                buildClickFeed,
-    'scroll_update':        buildScrollFeed,
-    'keyboard_update':      buildKeyboardFeed,
-    'mouse_travel_update':  buildMouseTravelFeed,
+    click: buildClickFeed,
+    scroll_update: buildScrollFeed,
+    keyboard_update: buildKeyboardFeed,
+    mouse_travel_update: buildMouseTravelFeed,
 };
 
 // ========================================================
 // Feed event orchestrator (R4: data-driven metric snapshot)
 // ========================================================
 
-function buildFeedEvent(payload: EventPayload, m: Metrics, composite: number, ts: number): FeedEvent | null {
+function buildFeedEvent(payload: EventPayload, m: Metrics, ts: number): FeedEvent | null {
     feedCounter++;
     const id = feedCounter;
 
     // Build metric snapshot via data-driven loop
-    const metricUpdates = buildMetricSnapshot(m, composite);
+    const metricUpdates = buildMetricSnapshot(m);
 
     // Emit any new idle gaps (use counter to avoid re-emitting after storage round-trip)
     const gaps = m.time_on_task.idle_gaps || [];
@@ -727,17 +874,19 @@ function buildFeedEvent(payload: EventPayload, m: Metrics, composite: number, ts
         const gap = gaps[emittedGapCount];
         emittedGapCount++;
         const gapSec = round2(gap.gap_ms / 1000);
-        chrome.runtime.sendMessage({
-            type: 'FEED_EVENT',
-            event: {
-                id: id - 0.5,
-                ts,
-                type: 'gap',
-                label: `GAP ${gapSec}s idle`,
-                detail: `after "${gap.after_action}"`,
-                metricUpdates: {}
-            }
-        }).catch(NOOP);
+        chrome.runtime
+            .sendMessage({
+                type: "FEED_EVENT",
+                event: {
+                    id: id - 0.5,
+                    ts,
+                    type: "gap",
+                    label: `GAP ${gapSec}s idle`,
+                    detail: `after "${gap.after_action}"`,
+                    metricUpdates: {},
+                },
+            })
+            .catch(NOOP);
     }
 
     const builder = FEED_BUILDERS[payload.type];

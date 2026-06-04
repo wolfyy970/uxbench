@@ -1,15 +1,15 @@
 // Chrome Extension API mock for testing
 // Provides minimal stubs for chrome.storage.local, chrome.runtime, chrome.tabs, etc.
 
-import { vi } from 'vitest';
+import { vi } from "vitest";
 
 const storage: Record<string, any> = {};
 
-export const chrome = {
+export const chrome: any = {
     storage: {
         local: {
             get: vi.fn(async (keys: string | string[]) => {
-                const keyList = typeof keys === 'string' ? [keys] : keys;
+                const keyList = typeof keys === "string" ? [keys] : keys;
                 const result: Record<string, any> = {};
                 for (const key of keyList) {
                     if (key in storage) result[key] = storage[key];
@@ -20,7 +20,7 @@ export const chrome = {
                 Object.assign(storage, items);
             }),
             remove: vi.fn(async (keys: string | string[]) => {
-                const keyList = typeof keys === 'string' ? [keys] : keys;
+                const keyList = typeof keys === "string" ? [keys] : keys;
                 for (const key of keyList) {
                     delete storage[key];
                 }
@@ -29,8 +29,8 @@ export const chrome = {
             _storage: storage,
             _clear: () => {
                 for (const key of Object.keys(storage)) delete storage[key];
-            }
-        }
+            },
+        },
     },
     runtime: {
         sendMessage: vi.fn(async () => {}),
@@ -42,7 +42,7 @@ export const chrome = {
         },
     },
     tabs: {
-        query: vi.fn(async () => [{ id: 1, url: 'https://example.com' }]),
+        query: vi.fn(async () => [{ id: 1, url: "https://example.com" }]),
         sendMessage: vi.fn(async () => {}),
     },
     action: {

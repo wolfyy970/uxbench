@@ -5,15 +5,10 @@ recorder/node_modules/
 # Build outputs
 dist/
 recorder/dist/
-cli/uxbench
-uxbench
+recorder/UXBench/
+recorder/UXBench.zip
 *.o
 *.test
-
-# Go
-go.work
-go.work.sum
-.tools/
 
 # OS
 .DS_Store

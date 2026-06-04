@@ -1,654 +1,704 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
+    <head>
+        <meta charset="utf-8" />
+        <title>UX BENCH</title>
+        <style>
+            @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
-<head>
-  <meta charset="utf-8">
-  <title>UX BENCH</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-    /* ========================================================
+            /* ========================================================
        DESIGN SYSTEM — Primitive Tokens
        Raw palette values. Never referenced directly in components.
        ======================================================== */
-    :root {
-      /* Palette */
-      --ds-black:       #020202;
-      --ds-dark:        #101010;
-      --ds-charcoal:    #3E3A39;
-      --ds-warm-gray:   #8A8381;
-      --ds-orange:      #EE6019;
-      --ds-light:       #EEEEEE;
+            :root {
+                /* Palette */
+                --ds-black: #020202;
+                --ds-dark: #101010;
+                --ds-charcoal: #3e3a39;
+                --ds-warm-gray: #8a8381;
+                --ds-orange: #ee6019;
+                --ds-light: #eeeeee;
 
-      /* ========================================================
+                /* ========================================================
          DESIGN SYSTEM — Semantic Tokens (Backgrounds)
          ======================================================== */
-      --bg-base:        var(--ds-black);
-      --bg-raised:      var(--ds-dark);
-      --bg-overlay:     var(--ds-charcoal);
+                --bg-base: var(--ds-black);
+                --bg-raised: var(--ds-dark);
+                --bg-overlay: var(--ds-charcoal);
 
-      /* ========================================================
+                /* ========================================================
          DESIGN SYSTEM — Semantic Tokens (Foreground / Text)
          ======================================================== */
-      --fg-default:     var(--ds-light);
-      --fg-muted:       var(--ds-warm-gray);
-      --fg-faint:       var(--ds-charcoal);
-      --fg-accent:      var(--ds-orange);
+                --fg-default: var(--ds-light);
+                --fg-muted: var(--ds-warm-gray);
+                --fg-faint: var(--ds-charcoal);
+                --fg-accent: var(--ds-orange);
 
-      /* ========================================================
+                /* ========================================================
          DESIGN SYSTEM — Semantic Tokens (Borders)
          ======================================================== */
-      --border-default: var(--ds-charcoal);
-      --border-subtle:  color-mix(in srgb, var(--ds-charcoal) 50%, var(--ds-black));
-      --border-focus:   var(--ds-orange);
+                --border-default: var(--ds-charcoal);
+                --border-subtle: color-mix(in srgb, var(--ds-charcoal) 50%, var(--ds-black));
+                --border-focus: var(--ds-orange);
 
-      /* ========================================================
+                /* ========================================================
          DESIGN SYSTEM — Alpha Scale
          Used by tints, glows, and disabled/animation states.
          ======================================================== */
-      --alpha-subtle:   8%;
-      --alpha-light:   15%;
-      --alpha-medium:  25%;
-      --alpha-muted:   0.4;   /* disabled elements */
-      --alpha-dim:     0.3;   /* animation low point */
+                --alpha-subtle: 8%;
+                --alpha-light: 15%;
+                --alpha-medium: 25%;
+                --alpha-muted: 0.4; /* disabled elements */
+                --alpha-dim: 0.3; /* animation low point */
 
-      /* ========================================================
+                /* ========================================================
          DESIGN SYSTEM — Semantic Tokens (Feedback)
          ======================================================== */
-      --glow-accent:        color-mix(in srgb, var(--ds-orange) var(--alpha-medium), transparent);
+                --glow-accent: color-mix(in srgb, var(--ds-orange) var(--alpha-medium), transparent);
 
-
-      /* ========================================================
+                /* ========================================================
          DESIGN SYSTEM — Typography Scale
          Uses a minor-third ratio (~1.2) compressed for sidebar.
          ======================================================== */
-      --font-family:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-      --text-display:   16px;   /* null-state hero, run indicator   */
-      --text-h1:        13px;   /* panel title / hero number       */
-      --text-h2:        11px;   /* section header, prominent value  */
-      --text-body:      10px;   /* default body, metric values      */
-      --text-caption:    9px;   /* labels, timestamps, fine print   */
+                --text-display: 16px; /* null-state hero, run indicator   */
+                --text-h1: 13px; /* panel title / hero number       */
+                --text-h2: 11px; /* section header, prominent value  */
+                --text-body: 10px; /* default body, metric values      */
+                --text-caption: 9px; /* labels, timestamps, fine print   */
 
-      --weight-regular:  400;
-      --weight-medium:   500;
-      --weight-semi:     600;
-      --weight-bold:     700;
+                --weight-regular: 400;
+                --weight-medium: 500;
+                --weight-semi: 600;
+                --weight-bold: 700;
 
-      --leading-tight:   1.2;
-      --leading-normal:  1.4;
+                --leading-tight: 1.2;
+                --leading-normal: 1.4;
 
-      --tracking-normal: 0.5px;
-      --tracking-wide:   1px;
-      --tracking-wider:  1.5px;
+                --tracking-normal: 0.5px;
+                --tracking-wide: 1px;
+                --tracking-wider: 1.5px;
 
-      /* ========================================================
+                /* ========================================================
          DESIGN SYSTEM — Spacing Scale (4px base)
          ======================================================== */
-      --space-1:  2px;
-      --space-2:  4px;
-      --space-3:  6px;
-      --space-4:  8px;
-      --space-5: 10px;
-      --space-6: 12px;
-      --space-7: 16px;
-      --space-8: 20px;
+                --space-1: 2px;
+                --space-2: 4px;
+                --space-3: 6px;
+                --space-4: 8px;
+                --space-5: 10px;
+                --space-6: 12px;
+                --space-7: 16px;
+                --space-8: 20px;
 
-      /* ========================================================
+                /* ========================================================
          DESIGN SYSTEM — Radius & Shadows
          ======================================================== */
-      --radius-sm:  2px;
-      --radius-md:  4px;
-      --radius-lg:  6px;
-      --radius-full: 9999px;
+                --radius-sm: 2px;
+                --radius-md: 4px;
+                --radius-lg: 6px;
+                --radius-full: 9999px;
 
-      --shadow-glow-accent: 0 0 4px var(--glow-accent);
-      --shadow-glow-rec:    0 0 6px var(--glow-accent);
+                --shadow-glow-accent: 0 0 4px var(--glow-accent);
+                --shadow-glow-rec: 0 0 6px var(--glow-accent);
 
-      /* ========================================================
+                /* ========================================================
          DESIGN SYSTEM — Transitions
          ======================================================== */
-      --ease-default: 0.15s ease;
+                --ease-default: 0.15s ease;
 
-      /* ========================================================
+                /* ========================================================
          DESIGN SYSTEM — Scrollbar
          ======================================================== */
-      --scrollbar-w: 3px;
-    }
+                --scrollbar-w: 3px;
+            }
 
-
-    /* ========================================================
+            /* ========================================================
        BASE RESET
        ======================================================== */
-    *, *::before, *::after { box-sizing: border-box; }
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+            }
 
-    body {
-      background-color: var(--bg-base);
-      color: var(--fg-default);
-      font-family: var(--font-family);
-      font-size: var(--text-body);
-      font-weight: var(--weight-regular);
-      line-height: var(--leading-normal);
-      padding: 0;
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
+            body {
+                background-color: var(--bg-base);
+                color: var(--fg-default);
+                font-family: var(--font-family);
+                font-size: var(--text-body);
+                font-weight: var(--weight-regular);
+                line-height: var(--leading-normal);
+                padding: 0;
+                margin: 0;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                -webkit-font-smoothing: antialiased;
+            }
 
-
-    /* ========================================================
+            /* ========================================================
        TYPOGRAPHY UTILITIES
        ======================================================== */
-    .t-h1 {
-      font-size: var(--text-h1);
-      font-weight: var(--weight-bold);
-      line-height: var(--leading-tight);
-      letter-spacing: var(--tracking-wider);
-    }
+            .t-h1 {
+                font-size: var(--text-h1);
+                font-weight: var(--weight-bold);
+                line-height: var(--leading-tight);
+                letter-spacing: var(--tracking-wider);
+            }
 
-    .t-h2 {
-      font-size: var(--text-h2);
-      font-weight: var(--weight-semi);
-      line-height: var(--leading-tight);
-      letter-spacing: var(--tracking-normal);
-    }
+            .t-h2 {
+                font-size: var(--text-h2);
+                font-weight: var(--weight-semi);
+                line-height: var(--leading-tight);
+                letter-spacing: var(--tracking-normal);
+            }
 
-    .t-body {
-      font-size: var(--text-body);
-      font-weight: var(--weight-medium);
-      line-height: var(--leading-normal);
-    }
+            .t-body {
+                font-size: var(--text-body);
+                font-weight: var(--weight-medium);
+                line-height: var(--leading-normal);
+            }
 
-    .t-caption {
-      font-size: var(--text-caption);
-      font-weight: var(--weight-semi);
-      line-height: var(--leading-tight);
-      letter-spacing: var(--tracking-wide);
-      text-transform: uppercase;
-    }
+            .t-caption {
+                font-size: var(--text-caption);
+                font-weight: var(--weight-semi);
+                line-height: var(--leading-tight);
+                letter-spacing: var(--tracking-wide);
+                text-transform: uppercase;
+            }
 
-    .t-mono {
-      font-variant-numeric: tabular-nums;
-    }
+            .t-mono {
+                font-variant-numeric: tabular-nums;
+            }
 
-
-    /* ========================================================
+            /* ========================================================
        LAYOUT — Panel Shell
        ======================================================== */
-    .hud-panel {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      padding: var(--space-6);
-      overflow: hidden;
-      gap: var(--space-5);
-    }
+            .hud-panel {
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+                padding: var(--space-6);
+                overflow: hidden;
+                gap: var(--space-5);
+            }
 
-
-    /* ========================================================
+            /* ========================================================
        COMPONENT — Header Bar
        ======================================================== */
-    header {
-      background: var(--bg-raised);
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-lg);
-      padding: var(--space-4) var(--space-5);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-shrink: 0;
-    }
+            header {
+                background: var(--bg-raised);
+                border: 1px solid var(--border-default);
+                border-radius: var(--radius-lg);
+                padding: var(--space-4) var(--space-5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-shrink: 0;
+            }
 
-    .header-brand {
-      color: var(--fg-accent);
-    }
+            .header-brand {
+                color: var(--fg-accent);
+            }
 
-
-    /* ========================================================
+            /* ========================================================
        COMPONENT — Section
        ======================================================== */
-    .section {
-      flex-shrink: 0;
-    }
+            .section {
+                flex-shrink: 0;
+            }
 
-    .section-label {
-      color: var(--fg-faint);
-      display: block;
-      margin-bottom: var(--space-3);
-    }
+            .section-label {
+                color: var(--fg-faint);
+                display: block;
+                margin-bottom: var(--space-3);
+            }
 
-
-
-
-    /* ========================================================
+            /* ========================================================
        COMPONENT — Button
        ======================================================== */
-    /* --------------------------------------------------------
+            /* --------------------------------------------------------
        Interactive surface — unified states for buttons,
        format-select, and viewport-select.
        Orange border = "you are interacting with this".
        -------------------------------------------------------- */
-    button, .format-select {
-      background: var(--bg-raised);
-      color: var(--fg-default);
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-lg);
-      padding: var(--space-4) var(--space-5);
-      font-family: var(--font-family);
-      font-size: var(--text-body);
-      font-weight: var(--weight-semi);
-      letter-spacing: var(--tracking-normal);
-      text-transform: uppercase;
-      cursor: pointer;
-      text-align: center;
-      flex-shrink: 0;
-      outline: none;
-      transition: all var(--ease-default);
-    }
+            button,
+            .format-select {
+                background: var(--bg-raised);
+                color: var(--fg-default);
+                border: 1px solid var(--border-default);
+                border-radius: var(--radius-lg);
+                padding: var(--space-4) var(--space-5);
+                font-family: var(--font-family);
+                font-size: var(--text-body);
+                font-weight: var(--weight-semi);
+                letter-spacing: var(--tracking-normal);
+                text-transform: uppercase;
+                cursor: pointer;
+                text-align: center;
+                flex-shrink: 0;
+                outline: none;
+                transition: all var(--ease-default);
+            }
 
-    button { width: 100%; }
+            button {
+                width: 100%;
+            }
 
-    button:hover, .format-select:hover {
-      border-color: var(--border-focus);
-    }
+            button:hover,
+            .format-select:hover {
+                border-color: var(--border-focus);
+            }
 
-    button:active, .format-select:active {
-      transform: translateY(1px);
-      border-color: var(--border-focus);
-      background: var(--bg-overlay);
-    }
+            button:active,
+            .format-select:active {
+                transform: translateY(1px);
+                border-color: var(--border-focus);
+                background: var(--bg-overlay);
+            }
 
-    button:focus-visible, .format-select:focus-visible {
-      border-color: var(--border-focus);
-      box-shadow: var(--shadow-glow-accent);
-    }
+            button:focus-visible,
+            .format-select:focus-visible {
+                border-color: var(--border-focus);
+                box-shadow: var(--shadow-glow-accent);
+            }
 
-    button:disabled, .format-select:disabled {
-      border-color: var(--border-subtle);
-      color: var(--fg-faint);
-      cursor: not-allowed;
-      pointer-events: none;
-      opacity: var(--alpha-muted);
-    }
+            button:disabled,
+            .format-select:disabled {
+                border-color: var(--border-subtle);
+                color: var(--fg-faint);
+                cursor: not-allowed;
+                pointer-events: none;
+                opacity: var(--alpha-muted);
+            }
 
-    .btn-row {
-      display: flex;
-      gap: var(--space-3);
-    }
+            .btn-row {
+                display: flex;
+                gap: var(--space-3);
+            }
 
-    .btn-flex-2 { flex: 2; }
-    .btn-flex-1 { flex: 1; }
+            .btn-flex-2 {
+                flex: 2;
+            }
+            .btn-flex-1 {
+                flex: 1;
+            }
 
-    .format-select {
-      flex: 0 0 auto;
-      width: auto;
-      padding-right: var(--space-8);
-      -webkit-appearance: none;
-      appearance: none;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8381' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-      background-repeat: no-repeat;
-      background-position: right var(--space-3) center;
-      background-size: var(--space-5);
-    }
+            .format-select {
+                flex: 0 0 auto;
+                width: auto;
+                padding-right: var(--space-8);
+                -webkit-appearance: none;
+                appearance: none;
+                background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8381' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+                background-repeat: no-repeat;
+                background-position: right var(--space-3) center;
+                background-size: var(--space-5);
+            }
 
-
-    /* ========================================================
+            /* ========================================================
        COMPONENT — Viewport Select
        Same interaction language as buttons: orange border on hover/focus.
        ======================================================== */
-    select:not(.format-select) {
-      width: 100%;
-      background: var(--bg-raised);
-      color: var(--fg-default);
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-md);
-      font-family: var(--font-family);
-      font-size: var(--text-body);
-      padding: var(--space-3) var(--space-4);
-      outline: none;
-      -webkit-appearance: none;
-      appearance: none;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8381' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-      background-repeat: no-repeat;
-      background-position: right var(--space-3) center;
-      background-size: var(--space-6);
-      transition: all var(--ease-default);
-    }
+            select:not(.format-select) {
+                width: 100%;
+                background: var(--bg-raised);
+                color: var(--fg-default);
+                border: 1px solid var(--border-default);
+                border-radius: var(--radius-md);
+                font-family: var(--font-family);
+                font-size: var(--text-body);
+                padding: var(--space-3) var(--space-4);
+                outline: none;
+                -webkit-appearance: none;
+                appearance: none;
+                background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8381' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+                background-repeat: no-repeat;
+                background-position: right var(--space-3) center;
+                background-size: var(--space-6);
+                transition: all var(--ease-default);
+            }
 
-    select:not(.format-select):hover  { border-color: var(--border-focus); }
-    select:not(.format-select):focus  { border-color: var(--border-focus); box-shadow: var(--shadow-glow-accent); }
+            select:not(.format-select):hover {
+                border-color: var(--border-focus);
+            }
+            select:not(.format-select):focus {
+                border-color: var(--border-focus);
+                box-shadow: var(--shadow-glow-accent);
+            }
 
-
-    /* ========================================================
+            /* ========================================================
        COMPONENT — Card (shared surface for metric grid & feed)
        ======================================================== */
-    .card {
-      background: var(--bg-raised);
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-lg);
-      padding: var(--space-4) var(--space-5);
-    }
+            .card {
+                background: var(--bg-raised);
+                border: 1px solid var(--border-default);
+                border-radius: var(--radius-lg);
+                padding: var(--space-4) var(--space-5);
+            }
 
-
-    /* ========================================================
+            /* ========================================================
        COMPONENT — Metric Grid
        ======================================================== */
-    .metric-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--space-1) var(--space-6);
-    }
+            .metric-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: var(--space-1) var(--space-6);
+            }
 
-    .metric-cell {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: var(--space-1) 0;
-    }
+            .metric-cell {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: var(--space-1) 0;
+            }
 
-    .metric-key {
-      color: var(--fg-muted);
-      font-size: var(--text-caption);
-      font-weight: var(--weight-medium);
-      letter-spacing: var(--tracking-normal);
-    }
+            .metric-key {
+                color: var(--fg-muted);
+                font-size: var(--text-caption);
+                font-weight: var(--weight-medium);
+                letter-spacing: var(--tracking-normal);
+            }
 
-    .metric-val {
-      color: var(--fg-default);
-      font-weight: var(--weight-semi);
-    }
+            .metric-val {
+                color: var(--fg-default);
+                font-weight: var(--weight-semi);
+            }
 
-    .metric-cost {
-      grid-column: 1 / -1;
-      border-top: 1px solid var(--border-default);
-      padding-top: var(--space-2);
-      margin-top: var(--space-1);
-    }
-
-    .metric-cost .metric-key {
-      color: var(--fg-muted);
-      font-weight: var(--weight-semi);
-    }
-
-    .metric-cost .metric-val {
-      color: var(--fg-accent);
-      font-size: var(--text-h2);
-    }
-
-
-    /* ========================================================
+            /* ========================================================
        COMPONENT — Activity Feed
        ======================================================== */
-    .feed-section {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      min-height: 0;
-      padding-right: 0;
-    }
+            .feed-section {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                min-height: 0;
+                padding-right: 0;
+            }
 
-    .feed-section > .section-label {
-      padding-right: var(--space-5);
-    }
+            .feed-section > .section-label {
+                padding-right: var(--space-5);
+            }
 
-    .feed {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0 var(--space-5) 0 0;
-      scroll-behavior: smooth;
-    }
+            .feed {
+                flex: 1;
+                overflow-y: auto;
+                padding: 0 var(--space-5) 0 0;
+                scroll-behavior: smooth;
+            }
 
-    /* Scrollbar */
-    .feed::-webkit-scrollbar               { width: var(--scrollbar-w); }
-    .feed::-webkit-scrollbar-track          { background: transparent; }
-    .feed::-webkit-scrollbar-thumb          { background: var(--border-default); border-radius: var(--radius-full); }
-    .feed::-webkit-scrollbar-thumb:hover    { background: var(--fg-faint); }
+            /* Scrollbar */
+            .feed::-webkit-scrollbar {
+                width: var(--scrollbar-w);
+            }
+            .feed::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            .feed::-webkit-scrollbar-thumb {
+                background: var(--border-default);
+                border-radius: var(--radius-full);
+            }
+            .feed::-webkit-scrollbar-thumb:hover {
+                background: var(--fg-faint);
+            }
 
-    /* Entry row */
-    .feed-entry {
-      display: grid;
-      grid-template-columns: 34px 14px 1fr;
-      min-height: var(--space-8);
-    }
+            /* Entry row */
+            .feed-entry {
+                display: grid;
+                grid-template-columns: 34px 14px 1fr;
+                min-height: var(--space-8);
+            }
 
-    /* Timestamp */
-    .feed-ts {
-      color: var(--fg-faint);
-      font-size: var(--text-caption);
-      text-align: right;
-      padding-right: var(--space-3);
-      padding-top: var(--space-1);
-    }
+            /* Timestamp */
+            .feed-ts {
+                color: var(--fg-faint);
+                font-size: var(--text-caption);
+                text-align: right;
+                padding-right: var(--space-3);
+                padding-top: var(--space-1);
+            }
 
-    /* Timeline rail */
-    .feed-node {
-      position: relative;
-      display: flex;
-      justify-content: center;
-    }
+            /* Timeline rail */
+            .feed-node {
+                position: relative;
+                display: flex;
+                justify-content: center;
+            }
 
-    .feed-node::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 1px;
-      background: var(--border-default);
-    }
+            .feed-node::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 1px;
+                background: var(--border-default);
+            }
 
-    .feed-entry:first-child .feed-node::before { top: 50%; }
+            .feed-entry:first-child .feed-node::before {
+                top: 50%;
+            }
 
-    /* Dot on the rail */
-    .feed-dot {
-      position: relative;
-      z-index: 1;
-      width: 7px;
-      height: 7px;
-      border-radius: var(--radius-full);
-      background: var(--fg-accent);
-      margin-top: var(--space-3);
-      flex-shrink: 0;
-      box-shadow: var(--shadow-glow-accent);
-    }
+            /* Dot on the rail */
+            .feed-dot {
+                position: relative;
+                z-index: 1;
+                width: 7px;
+                height: 7px;
+                border-radius: var(--radius-full);
+                background: var(--fg-accent);
+                margin-top: var(--space-3);
+                flex-shrink: 0;
+                box-shadow: var(--shadow-glow-accent);
+            }
 
-    /* Content */
-    .feed-content {
-      padding: var(--space-1) 0 var(--space-2) var(--space-3);
-      min-width: 0;
-    }
+            /* Content */
+            .feed-content {
+                padding: var(--space-1) 0 var(--space-2) var(--space-3);
+                min-width: 0;
+            }
 
-    .feed-label {
-      font-size: var(--text-body);
-      font-weight: var(--weight-medium);
-      color: var(--fg-default);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+            .feed-label {
+                font-size: var(--text-body);
+                font-weight: var(--weight-medium);
+                color: var(--fg-default);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
 
-    .feed-detail {
-      color: var(--fg-muted);
-      font-size: var(--text-caption);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-top: 1px;
-    }
+            .feed-detail {
+                color: var(--fg-muted);
+                font-size: var(--text-caption);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                margin-top: 1px;
+            }
 
-    /* Null state — shown when feed is empty (fresh open or after reset) */
-    .feed-null {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      gap: var(--space-4);
-      text-align: center;
-    }
+            /* Null state — shown when feed is empty (fresh open or after reset) */
+            .feed-null {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                gap: var(--space-4);
+                text-align: center;
+            }
 
-    .feed-null-label {
-      color: var(--fg-muted);
-      font-size: var(--text-body);
-      font-weight: var(--weight-medium);
-      letter-spacing: var(--tracking-normal);
-      text-transform: uppercase;
-    }
+            .feed-null-label {
+                color: var(--fg-muted);
+                font-size: var(--text-body);
+                font-weight: var(--weight-medium);
+                letter-spacing: var(--tracking-normal);
+                text-transform: uppercase;
+            }
 
-    .feed-null-run {
-      font-size: var(--text-display);
-      font-weight: var(--weight-bold);
-      color: var(--fg-accent);
-      letter-spacing: var(--tracking-wider);
-      text-transform: uppercase;
-    }
+            .feed-null-run {
+                font-size: var(--text-display);
+                font-weight: var(--weight-bold);
+                color: var(--fg-accent);
+                letter-spacing: var(--tracking-wider);
+                text-transform: uppercase;
+            }
 
-    .feed-null-hint {
-      color: var(--fg-muted);
-      font-size: var(--text-caption);
-      line-height: var(--leading-normal);
-    }
+            .feed-null-hint {
+                color: var(--fg-muted);
+                font-size: var(--text-caption);
+                line-height: var(--leading-normal);
+            }
 
-    /* Run-complete banner — appended to feed when a recording finishes */
-    .feed-complete {
-      text-align: center;
-      padding: var(--space-5) 0 var(--space-2);
-      margin-top: var(--space-3);
-      color: var(--fg-muted);
-      font-size: var(--text-caption);
-      font-weight: var(--weight-semi);
-      letter-spacing: var(--tracking-wide);
-      text-transform: uppercase;
-    }
+            /* Run-complete banner — appended to feed when a recording finishes */
+            .feed-complete {
+                text-align: center;
+                padding: var(--space-5) 0 var(--space-2);
+                margin-top: var(--space-3);
+                color: var(--fg-muted);
+                font-size: var(--text-caption);
+                font-weight: var(--weight-semi);
+                letter-spacing: var(--tracking-wide);
+                text-transform: uppercase;
+            }
 
-
-    /* ========================================================
+            /* ========================================================
        COMPONENT — Status Bar
        ======================================================== */
-    .status-bar {
-      font-size: var(--text-caption);
-      border-top: 1px solid var(--border-default);
-      padding-top: var(--space-4);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-      color: var(--fg-faint);
-    }
+            .status-bar {
+                font-size: var(--text-caption);
+                border-top: 1px solid var(--border-default);
+                padding-top: var(--space-4);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-shrink: 0;
+                color: var(--fg-faint);
+            }
 
-
-    /* ========================================================
+            /* ========================================================
        COMPONENT — Recording Indicator
        ======================================================== */
-    .rec-indicator {
-      display: inline-block;
-      width: var(--space-3);
-      height: var(--space-3);
-      background: var(--fg-faint);
-      border-radius: var(--radius-full);
-      margin-right: var(--space-3);
-      vertical-align: middle;
-    }
+            .rec-indicator {
+                display: inline-block;
+                width: var(--space-3);
+                height: var(--space-3);
+                background: var(--fg-faint);
+                border-radius: var(--radius-full);
+                margin-right: var(--space-3);
+                vertical-align: middle;
+            }
 
-    body.recording .rec-indicator {
-      background: var(--fg-accent);
-      box-shadow: var(--shadow-glow-rec);
-      animation: pulse 1.5s ease-in-out infinite;
-    }
+            body.recording .rec-indicator {
+                background: var(--fg-accent);
+                box-shadow: var(--shadow-glow-rec);
+                animation: pulse 1.5s ease-in-out infinite;
+            }
 
-    body.recording button#actionBtn {
-      color: var(--fg-default);
-      background: var(--bg-overlay);
-    }
+            body.recording button#actionBtn {
+                color: var(--fg-default);
+                background: var(--bg-overlay);
+            }
 
-    body.recording button#actionBtn:hover {
-      border-color: var(--border-focus);
-    }
+            body.recording button#actionBtn:hover {
+                border-color: var(--border-focus);
+            }
 
-
-    /* ========================================================
+            /* ========================================================
        ANIMATION
        ======================================================== */
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%      { opacity: var(--alpha-dim); }
-    }
-  </style>
-</head>
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: var(--alpha-dim);
+                }
+            }
+        </style>
+    </head>
 
-<body>
-  <div class="hud-panel">
+    <body>
+        <div class="hud-panel">
+            <header>
+                <span class="header-brand t-h1">UX BENCH</span>
+            </header>
 
-    <header>
-      <span class="header-brand t-h1">UX BENCH</span>
-    </header>
+            <div class="section">
+                <span class="section-label t-caption">Viewport</span>
+                <select id="resSelect">
+                    <option value="1024x768" selected>1024 × 768 — Tablet</option>
+                    <option value="1280x800">1280 × 800 — Laptop</option>
+                    <option value="1366x768">1366 × 768 — Common</option>
+                    <option value="1440x900">1440 × 900 — Desktop</option>
+                    <option value="1920x1080">1920 × 1080 — Full HD</option>
+                </select>
+            </div>
 
-    <div class="section">
-      <span class="section-label t-caption">Viewport</span>
-      <select id="resSelect">
-        <option value="1024x768" selected>1024 × 768 — Tablet</option>
-        <option value="1280x800">1280 × 800 — Laptop</option>
-        <option value="1366x768">1366 × 768 — Common</option>
-        <option value="1440x900">1440 × 900 — Desktop</option>
-        <option value="1920x1080">1920 × 1080 — Full HD</option>
-      </select>
-    </div>
+            <div class="section">
+                <span class="section-label t-caption">Metrics</span>
+                <div class="metric-grid card">
+                    <!-- Temporal -->
+                    <div class="metric-cell">
+                        <span class="metric-key" title="Total elapsed time since recording started">Time</span
+                        ><span id="mTaskTime" class="metric-val t-mono">--</span>
+                    </div>
+                    <div class="metric-cell">
+                        <span
+                            class="metric-key"
+                            title="Pauses longer than 3 seconds — user may be thinking, searching, or confused"
+                            >Idle Gaps</span
+                        ><span id="mGaps" class="metric-val t-mono">--</span>
+                    </div>
+                    <!-- Click & Targeting -->
+                    <div class="metric-cell">
+                        <span class="metric-key" title="Total clicks recorded (productive, ceremonial, and wasted)"
+                            >Clicks</span
+                        ><span id="mClicks" class="metric-val t-mono">--</span>
+                    </div>
+                    <div class="metric-cell">
+                        <span
+                            class="metric-key"
+                            title="Fitts' Law index of difficulty — average effort to reach click targets (distance vs. size)"
+                            >Target Effort</span
+                        ><span id="mFitts" class="metric-val t-mono">--</span>
+                    </div>
+                    <!-- Movement -->
+                    <div class="metric-cell">
+                        <span
+                            class="metric-key"
+                            title="Total cursor travel distance — raw motor cost of mouse movement across the session"
+                            >Cursor</span
+                        ><span id="mTravel" class="metric-val t-mono">--</span>
+                    </div>
+                    <div class="metric-cell">
+                        <span
+                            class="metric-key"
+                            title="Average scanning distance in pixels between consecutive click targets"
+                            >Eye Travel</span
+                        ><span id="mScan" class="metric-val t-mono">--</span>
+                    </div>
+                    <!-- Navigation -->
+                    <div class="metric-cell">
+                        <span
+                            class="metric-key"
+                            title="Total scroll distance in pixels — higher values may indicate content is hard to find"
+                            >Scroll</span
+                        ><span id="mScroll" class="metric-val t-mono">--</span>
+                    </div>
+                    <div class="metric-cell">
+                        <span class="metric-key" title="Context switches between mouse and keyboard input modes"
+                            >Switches</span
+                        ><span id="mSwitches" class="metric-val t-mono">--</span>
+                    </div>
+                    <!-- Input -->
+                    <div class="metric-cell">
+                        <span
+                            class="metric-key"
+                            title="Modifier-key combos used (Ctrl/Cmd/Alt + key) — signals keyboard proficiency"
+                            >Shortcuts</span
+                        ><span id="mShortcuts" class="metric-val t-mono">--</span>
+                    </div>
+                    <div class="metric-cell">
+                        <span
+                            class="metric-key"
+                            title="Typing ratio — free-text inputs vs. constrained inputs (dropdowns, toggles, pickers)"
+                            >Typing</span
+                        ><span id="mTyping" class="metric-val t-mono">--</span>
+                    </div>
+                </div>
+            </div>
 
-    <div class="section">
-      <span class="section-label t-caption">Metrics</span>
-      <div class="metric-grid card">
-        <!-- Temporal -->
-        <div class="metric-cell"><span class="metric-key" title="Total elapsed time since recording started">Time</span><span id="mTaskTime" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Pauses longer than 3 seconds — user may be thinking, searching, or confused">Idle Gaps</span><span id="mGaps" class="metric-val t-mono">--</span></div>
-        <!-- Click & Targeting -->
-        <div class="metric-cell"><span class="metric-key" title="Total clicks recorded (productive, ceremonial, and wasted)">Clicks</span><span id="mClicks" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Fitts' Law index of difficulty — average effort to reach click targets (distance vs. size)">Target Effort</span><span id="mFitts" class="metric-val t-mono">--</span></div>
-        <!-- Movement -->
-        <div class="metric-cell"><span class="metric-key" title="Total cursor travel distance — raw motor cost of mouse movement across the session">Cursor</span><span id="mTravel" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Average scanning distance in pixels between consecutive click targets">Eye Travel</span><span id="mScan" class="metric-val t-mono">--</span></div>
-        <!-- Navigation -->
-        <div class="metric-cell"><span class="metric-key" title="Total scroll distance in pixels — higher values may indicate content is hard to find">Scroll</span><span id="mScroll" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Context switches between mouse and keyboard input modes">Switches</span><span id="mSwitches" class="metric-val t-mono">--</span></div>
-        <!-- Input -->
-        <div class="metric-cell"><span class="metric-key" title="Modifier-key combos used (Ctrl/Cmd/Alt + key) — signals keyboard proficiency">Shortcuts</span><span id="mShortcuts" class="metric-val t-mono">--</span></div>
-        <div class="metric-cell"><span class="metric-key" title="Typing ratio — free-text inputs vs. constrained inputs (dropdowns, toggles, pickers)">Typing</span><span id="mTyping" class="metric-val t-mono">--</span></div>
-        <!-- Summary -->
-        <div class="metric-cell metric-cost"><span class="metric-key" title="Composite interaction cost score — weighted sum of all metrics (lower is better)">Cost</span><span id="mCost" class="metric-val t-mono">--</span></div>
-      </div>
-    </div>
+            <div class="section feed-section card">
+                <span class="section-label t-caption">Activity</span>
+                <div id="feed" class="feed">
+                    <div class="feed-null">
+                        <span class="feed-null-label">Get ready for</span>
+                        <span class="feed-null-run">Run 1</span>
+                        <span class="feed-null-hint">Multiple runs are averaged<br />for reliable metrics.</span>
+                    </div>
+                </div>
+            </div>
 
-    <div class="section feed-section card">
-      <span class="section-label t-caption">Activity</span>
-      <div id="feed" class="feed">
-        <div class="feed-null">
-          <span class="feed-null-label">Get ready for</span>
-          <span class="feed-null-run">Run 1</span>
-          <span class="feed-null-hint">Multiple runs are averaged<br>for reliable metrics.</span>
+            <button id="actionBtn" disabled>Start ⌘⇧R</button>
+            <div class="btn-row" style="display: none">
+                <select id="formatSelect" class="format-select" disabled>
+                    <option value="json">JSON</option>
+                    <option value="markdown">Report</option>
+                </select>
+                <button id="downloadBtn" class="btn-flex-2" disabled>Download</button>
+                <button id="clearBtn" class="btn-flex-1" disabled>Reset</button>
+            </div>
+
+            <div class="status-bar" id="status">
+                <span><span class="rec-indicator"></span><span id="statusText">Ready</span></span>
+                <span id="liveTime" class="t-mono"></span>
+            </div>
         </div>
-      </div>
-    </div>
 
-    <button id="actionBtn" disabled>Start ⌘⇧R</button>
-    <div class="btn-row" style="display:none">
-      <select id="formatSelect" class="format-select" disabled>
-        <option value="json">JSON</option>
-        <option value="markdown">Report</option>
-      </select>
-      <button id="downloadBtn" class="btn-flex-2" disabled>Download</button>
-      <button id="clearBtn" class="btn-flex-1" disabled>Reset</button>
-    </div>
-
-    <div class="status-bar" id="status">
-      <span><span class="rec-indicator"></span><span id="statusText">Ready</span></span>
-      <span id="liveTime" class="t-mono"></span>
-    </div>
-
-  </div>
-
-  <script src="sidepanel.js"></script>
-</body>
-
+        <script src="sidepanel.js"></script>
+    </body>
 </html>

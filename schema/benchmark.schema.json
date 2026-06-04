@@ -3,12 +3,7 @@
     "$id": "https://uxbench.dev/schema/benchmark/1.0",
     "title": "UX Benchmark Report",
     "type": "object",
-    "required": [
-        "schema_version",
-        "source",
-        "metadata",
-        "metrics"
-    ],
+    "required": ["schema_version", "source", "metadata", "metrics"],
     "properties": {
         "schema_version": {
             "type": "string",
@@ -16,21 +11,11 @@
         },
         "source": {
             "type": "string",
-            "enum": [
-                "chrome-extension",
-                "playwright-mode1",
-                "playwright-mode2",
-                "custom"
-            ]
+            "enum": ["chrome-extension", "playwright-mode1", "playwright-mode2", "custom"]
         },
         "metadata": {
             "type": "object",
-            "required": [
-                "recording_name",
-                "product",
-                "task",
-                "timestamp"
-            ],
+            "required": ["recording_name", "product", "task", "timestamp"],
             "properties": {
                 "recording_name": {
                     "type": "string"
@@ -67,23 +52,13 @@
                 },
                 "operator": {
                     "type": "string",
-                    "enum": [
-                        "human",
-                        "ai-agent",
-                        "script"
-                    ]
+                    "enum": ["human", "ai-agent", "script"]
                 },
                 "persona": {
-                    "type": [
-                        "string",
-                        "null"
-                    ]
+                    "type": ["string", "null"]
                 },
                 "agent_model": {
-                    "type": [
-                        "string",
-                        "null"
-                    ]
+                    "type": ["string", "null"]
                 },
                 "navigation_count": {
                     "type": "integer"
@@ -95,9 +70,6 @@
         },
         "metrics": {
             "type": "object",
-            "required": [
-                "composite_score"
-            ],
             "properties": {
                 "click_count": {
                     "type": "object",
@@ -158,35 +130,20 @@
                             "minimum": 0
                         },
                         "active_ms": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
+                            "type": ["integer", "null"]
                         },
                         "idle_ms": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
+                            "type": ["integer", "null"]
                         },
                         "longest_idle_ms": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
+                            "type": ["integer", "null"]
                         },
                         "longest_idle_after": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
+                            "type": ["string", "null"],
                             "description": "What happened before the longest idle gap — e.g. 'opened filter panel'"
                         },
                         "idle_gaps": {
-                            "type": [
-                                "array",
-                                "null"
-                            ],
+                            "type": ["array", "null"],
                             "description": "Idle gaps > threshold (default 3s), each with context",
                             "items": {
                                 "type": "object",
@@ -237,10 +194,7 @@
                             "description": "Target dimensions — e.g. '80×32px'"
                         },
                         "top_3_hardest": {
-                            "type": [
-                                "array",
-                                "null"
-                            ],
+                            "type": ["array", "null"],
                             "description": "Three hardest targeting actions with element names and IDs",
                             "items": {
                                 "type": "object",
@@ -261,10 +215,7 @@
                             }
                         },
                         "throughput": {
-                            "type": [
-                                "object",
-                                "null"
-                            ],
+                            "type": ["object", "null"],
                             "properties": {
                                 "a_ms": {
                                     "type": "number"
@@ -278,16 +229,10 @@
                             }
                         },
                         "average_path_efficiency": {
-                            "type": [
-                                "number",
-                                "null"
-                            ]
+                            "type": ["number", "null"]
                         },
                         "total_overshoots": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
+                            "type": ["integer", "null"]
                         }
                     }
                 },
@@ -302,22 +247,13 @@
                             "type": "number"
                         },
                         "longest_keyboard_streak": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
+                            "type": ["integer", "null"]
                         },
                         "longest_mouse_streak": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
+                            "type": ["integer", "null"]
                         },
                         "most_switch_heavy_moment": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
+                            "type": ["string", "null"],
                             "description": "Where rapid switching happened — e.g. 'filling form then clicking dropdowns'"
                         }
                     }
@@ -345,10 +281,7 @@
                             "type": "number"
                         },
                         "free_text_fields": {
-                            "type": [
-                                "array",
-                                "null"
-                            ],
+                            "type": ["array", "null"],
                             "description": "Which fields required typing — e.g. ['Customer name', 'Notes']",
                             "items": {
                                 "type": "string"
@@ -375,17 +308,11 @@
                             "minimum": 0
                         },
                         "max_single_from": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
+                            "type": ["string", "null"],
                             "description": "Where the user was — e.g. 'data table row 3'"
                         },
                         "max_single_to": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
+                            "type": ["string", "null"],
                             "description": "Where they jumped to — e.g. 'toolbar Save button'"
                         }
                     }
@@ -398,28 +325,16 @@
                             "minimum": 0
                         },
                         "page_scroll_px": {
-                            "type": [
-                                "number",
-                                "null"
-                            ]
+                            "type": ["number", "null"]
                         },
                         "container_scroll_px": {
-                            "type": [
-                                "number",
-                                "null"
-                            ]
+                            "type": ["number", "null"]
                         },
                         "scroll_events": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
+                            "type": ["integer", "null"]
                         },
                         "heaviest_container": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
+                            "type": ["string", "null"],
                             "description": "Which container demanded the most scrolling — e.g. 'customer list sidebar'"
                         }
                     }
@@ -444,24 +359,15 @@
                             "description": "Number of sampled movement frames"
                         },
                         "path_efficiency": {
-                            "type": [
-                                "number",
-                                "null"
-                            ],
+                            "type": ["number", "null"],
                             "description": "Ratio of straight-line scanning distance to actual cursor travel (1.0 = perfectly efficient, lower = more wasted movement)"
                         }
                     }
-                },
-                "composite_score": {
-                    "type": "number"
                 }
             }
         },
         "human_signals": {
-            "type": [
-                "object",
-                "null"
-            ],
+            "type": ["object", "null"],
             "description": "Present only for chrome-extension recordings",
             "properties": {
                 "decision_time": {
@@ -480,10 +386,7 @@
                             "type": "integer"
                         },
                         "worst_idle": {
-                            "type": [
-                                "object",
-                                "null"
-                            ],
+                            "type": ["object", "null"],
                             "properties": {
                                 "gap_ms": {
                                     "type": "number"
@@ -526,11 +429,8 @@
             }
         },
         "action_log": {
-            "type": [
-                "array",
-                "null"
-            ],
-            "description": "Optional per-action detail. Available behind --research flag."
+            "type": ["array", "null"],
+            "description": "Optional per-action detail emitted by the recorder."
         }
     }
 }

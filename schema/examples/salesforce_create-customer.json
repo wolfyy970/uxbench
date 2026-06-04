@@ -6,10 +6,7 @@
         "product": "Salesforce",
         "task": "Create Customer",
         "url": "https://salesforce.com/app/contacts",
-        "urls_visited": [
-            "https://salesforce.com/app/contacts",
-            "https://salesforce.com/app/contacts/new"
-        ],
+        "urls_visited": ["https://salesforce.com/app/contacts", "https://salesforce.com/app/contacts/new"],
         "timestamp": "2023-10-27T10:00:00Z",
         "duration_ms": 45000,
         "browser": "Chrome 118",
@@ -107,13 +104,8 @@
         "typing_ratio": {
             "free_text_inputs": 4,
             "constrained_inputs": 2,
-            "ratio": 2.0,
-            "free_text_fields": [
-                "First Name",
-                "Last Name",
-                "Email",
-                "Phone"
-            ]
+            "ratio": 0.67,
+            "free_text_fields": ["First Name", "Last Name", "Email", "Phone"]
         },
         "scanning_distance": {
             "method": "euclidean",
@@ -130,7 +122,12 @@
             "scroll_events": 50,
             "heaviest_container": "Contact List"
         },
-        "composite_score": 85.5
+        "mouse_travel": {
+            "total_px": 18000,
+            "idle_travel_px": 3000,
+            "move_events": 360,
+            "path_efficiency": 0.83
+        }
     },
     "human_signals": {
         "decision_time": {

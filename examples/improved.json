@@ -1,89 +1,49 @@
 {
-    "schema_version": "1.0",
-    "source": "chrome-extension",
-    "metadata": {
-        "recording_name": "Modern CRM Redesign",
-        "product": "Modern CRM",
-        "task": "Create New Customer",
-        "url": "https://modern-crm.example.com/customers/new",
-        "urls_visited": ["https://modern-crm.example.com/customers/new"],
-        "timestamp": "2026-02-23T14:00:00Z",
-        "duration_ms": 18500,
-        "browser": "Chrome",
-        "source_version": "1.0.0",
-        "operator": "human",
-        "navigation_count": 1,
-        "navigation_gap_ms": 0
+    "schema_version": "3.0",
+    "source": "browser-library",
+    "app": "acme-crm",
+    "session_id": "session-improved-001",
+    "task_id": "create-customer",
+    "task_run_id": "create-customer-improved-001",
+    "status": "completed",
+    "started_at": "2026-06-05T12:10:00.000Z",
+    "ended_at": "2026-06-05T12:10:24.000Z",
+    "duration_ms": 24000,
+    "total_ms": 24000,
+    "active_ms": 22000,
+    "idle_ms": 2000,
+    "idle_gap_count": 0,
+    "dimensions": {
+        "variant": "improved",
+        "route": "/customers/new"
     },
     "metrics": {
-        "click_count": {
-            "total": 5,
-            "productive": 5,
+        "clicks": {
+            "total": 6,
             "ceremonial": 0,
-            "wasted": 0,
-            "ceremonial_details": [],
-            "wasted_details": []
+            "wasted": 0
         },
-        "time_on_task": {
-            "total_ms": 18500,
-            "active_ms": 18500,
-            "idle_ms": 0,
-            "idle_gaps": []
-        },
-        "fitts": {
-            "formula": "shannon",
-            "cumulative_id": 15.3,
+        "target_effort": {
             "average_id": 2.1,
-            "max_id": 2.8,
-            "max_id_element": "Save",
-            "max_id_distance_px": 260,
-            "max_id_target_size": "120x40px",
-            "top_3_hardest": [
-                {
-                    "element": "Save",
-                    "id": 2.8,
-                    "distance_px": 260,
-                    "target_size": "120x40px"
-                }
-            ]
+            "max_id": 3.4,
+            "max_distance_px": 420,
+            "max_target_width_px": 52
         },
-        "context_switches": {
-            "total": 2,
-            "ratio": 0.05,
-            "longest_keyboard_streak": 12,
-            "longest_mouse_streak": 2
-        },
-        "shortcut_coverage": {
-            "shortcuts_used": 1
-        },
-        "typing_ratio": {
-            "free_text_inputs": 3,
-            "constrained_inputs": 3,
-            "ratio": 0.5,
-            "free_text_fields": ["Name", "Email", "Notes"]
-        },
-        "scanning_distance": {
-            "method": "euclidean",
-            "cumulative_px": 4200,
-            "average_px": 700,
-            "max_single_px": 980,
-            "max_single_from": "Email",
-            "max_single_to": "Save"
-        },
-        "scroll_distance": {
+        "scroll": {
             "total_px": 600,
-            "page_scroll_px": 600,
-            "container_scroll_px": 0,
-            "total_horizontal_px": 0,
-            "scroll_events": 4,
-            "heaviest_container": null
+            "page_px": 600,
+            "container_px": 0,
+            "horizontal_px": 0
         },
-        "mouse_travel": {
-            "total_px": 6100,
-            "idle_travel_px": 700,
-            "move_events": 120,
-            "path_efficiency": 0.689
+        "cursor": {
+            "total_px": 7200,
+            "move_events": 180
+        },
+        "input": {
+            "context_switches": 3,
+            "longest_keyboard_streak": 8,
+            "longest_mouse_streak": 3,
+            "shortcuts_used": 1
         }
-    },
-    "action_log": []
+    }
 }

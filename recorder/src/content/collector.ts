@@ -1,16 +1,12 @@
 /// <reference types="chrome"/>
 
-import { ClickCollector } from "./clicks";
-import { ScrollCollector } from "./scroll";
-import { KeyboardCollector } from "./keyboard";
-import { MouseTravelCollector } from "./mouse-travel";
-import { BRAND_ORANGE } from "./shared";
-/** Max int32 — ensures overlay renders above all page content */
-const Z_TOP = 2147483647;
+import { createBrowserInstrumentation, type BrowserInstrumentation } from "../browser/instrumentation";
+import { MetricEngine, type MetricEvent, type TaskHandle, type TaskPayload, type TaskSnapshot } from "../core";
+import { BRAND_ORANGE, NOOP } from "./shared";
 
-/* Overlay is injected into the host page — cannot use our CSS custom properties.
- * Values mirror the design system: BRAND_ORANGE (--ds-orange), #EEEEEE (--ds-light),
- * rgba(0,0,0,0.2) (shadow), sans-serif (--font-family fallback). */
+const Z_TOP = 2147483647;
+const CURSOR_SNAPSHOT_THROTTLE_MS = 500;
+
 const OVERLAY_CSS = `
     position: fixed; bottom: 20px; right: 20px;
     background: ${BRAND_ORANGE}; color: #EEEEEE;
@@ -21,42 +17,20 @@ const OVERLAY_CSS = `
     pointer-events: none;
 `;
 
-/** Throttle interval for counting wheel events as mouse actions for context switch tracking */
-const WHEEL_MOUSE_ACTION_THROTTLE_MS = 300;
+interface HarnessFeedEvent {
+    type: string;
+    label: string;
+    detail?: string;
+}
 
-class Collector {
-    private isRecording = false;
-    private clickCollector: ClickCollector;
-    private scrollCollector: ScrollCollector;
-    private keyboardCollector: KeyboardCollector;
-    private mouseTravelCollector: MouseTravelCollector;
-    private lastWheelActionTime = 0;
-    private wheelHandler = () => this.handleWheel();
+class HarnessCollector {
+    private engine: MetricEngine | null = null;
+    private instrumentation: BrowserInstrumentation | null = null;
+    private task: TaskHandle | null = null;
+    private lastCursorSnapshotAt = 0;
 
     constructor() {
-        this.clickCollector = new ClickCollector();
-        this.scrollCollector = new ScrollCollector();
-        this.keyboardCollector = new KeyboardCollector();
-        this.mouseTravelCollector = new MouseTravelCollector();
-
-        // When a click is captured, also notify keyboard collector (for context switch tracking)
-        // and mouse travel (end of productive segment)
-        this.clickCollector.onClickCaptured = () => {
-            this.keyboardCollector.notifyMouseAction();
-            this.mouseTravelCollector.notifyClick();
-        };
-
         this.initListeners();
-    }
-
-    /** Wheel events are an unambiguous mouse action (keyboard-initiated scrolls don't fire wheel).
-     *  Throttled so a single scroll gesture counts as one action rather than dozens. */
-    private handleWheel() {
-        const now = Date.now();
-        if (now - this.lastWheelActionTime >= WHEEL_MOUSE_ACTION_THROTTLE_MS) {
-            this.lastWheelActionTime = now;
-            this.keyboardCollector.notifyMouseAction();
-        }
     }
 
     private initListeners() {
@@ -64,52 +38,100 @@ class Collector {
             if (message.type === "RECORDING_STARTED") {
                 this.start();
             } else if (message.type === "RECORDING_STOPPED") {
-                this.stop().catch(() => undefined);
+                this.stop("cancelled").catch(NOOP);
             } else if (message.type === "FLUSH_AND_STOP_RECORDING") {
-                this.stop()
-                    .then(() => sendResponse({ ok: true }))
+                this.stop("completed")
+                    .then((payload) => sendResponse({ ok: true, payload }))
                     .catch((err) => sendResponse({ ok: false, error: String(err) }));
                 return true;
             }
         });
 
-        // Check initial state (handles page load during active recording)
         chrome.storage.local.get("recordingState").then(({ recordingState }) => {
-            if (recordingState?.isRecording) {
-                this.start();
-            }
+            if (recordingState?.isRecording) this.start();
         });
     }
 
     private start() {
-        if (this.isRecording) return;
-        this.isRecording = true;
-        console.log("UXBench: Recording started");
+        if (this.engine || this.instrumentation || this.task) return;
 
+        this.engine = new MetricEngine({
+            app: "UX Bench Harness",
+            source: "chrome-extension",
+            sessionId: `harness-${Date.now().toString(36)}`,
+        });
+        this.task = this.engine.startTask("harness-recording", {
+            dimensions: { url: location.href },
+        });
+        this.instrumentation = createBrowserInstrumentation({
+            emit: (event) => this.handleMetricEvent(event),
+        });
+        this.instrumentation.start();
         this.addOverlay();
-
-        this.clickCollector.attach();
-        this.scrollCollector.attach();
-        this.keyboardCollector.attach();
-        this.mouseTravelCollector.attach();
-        // Wheel listener for context switch tracking (mouse wheel = mouse action)
-        document.addEventListener("wheel", this.wheelHandler, { capture: true, passive: true });
     }
 
-    private async stop() {
-        if (!this.isRecording) return;
-        this.isRecording = false;
-        console.log("UXBench: Recording stopped");
+    private async stop(status: "completed" | "cancelled"): Promise<TaskPayload | null> {
+        if (!this.engine || !this.instrumentation || !this.task) return null;
 
+        this.instrumentation.destroy();
+        const payload = this.task.end({ status });
+        this.engine = null;
+        this.instrumentation = null;
+        this.task = null;
+        this.lastCursorSnapshotAt = 0;
         this.removeOverlay();
+        return payload;
+    }
 
-        this.clickCollector.detach();
-        document.removeEventListener("wheel", this.wheelHandler, { capture: true });
-        await Promise.all([
-            this.scrollCollector.detach(),
-            this.keyboardCollector.detach(),
-            this.mouseTravelCollector.detach(),
-        ]);
+    private handleMetricEvent(event: MetricEvent) {
+        if (!this.engine || !this.task) return;
+        this.engine.ingest(event);
+
+        if (event.type === "cursor") {
+            const now = performance.now();
+            if (now - this.lastCursorSnapshotAt < CURSOR_SNAPSHOT_THROTTLE_MS) return;
+            this.lastCursorSnapshotAt = now;
+        }
+
+        const snapshot = this.task.snapshot();
+        chrome.runtime
+            .sendMessage({
+                type: "HARNESS_SNAPSHOT",
+                snapshot,
+                feed: this.buildFeedEvent(event, snapshot),
+            })
+            .catch(NOOP);
+    }
+
+    private buildFeedEvent(event: MetricEvent, snapshot: TaskSnapshot): HarnessFeedEvent {
+        switch (event.type) {
+            case "click": {
+                const id = event.target.id ? `#${event.target.id}` : "";
+                const detail =
+                    event.classification === "standard" ? `${event.target.tagName}${id}` : event.classification;
+                return {
+                    type: "click",
+                    label: `CLICK (${snapshot.metrics.clicks.total})`,
+                    detail,
+                };
+            }
+            case "scroll":
+                return {
+                    type: "scroll",
+                    label: `SCROLL +${Math.round(event.delta_px)}px`,
+                };
+            case "input":
+                return {
+                    type: "keyboard",
+                    label: event.mode === "keyboard" ? "KEYBOARD" : "MOUSE",
+                    detail: event.shortcut ? "shortcut" : undefined,
+                };
+            case "cursor":
+                return {
+                    type: "cursor",
+                    label: `TRAVEL +${Math.round(event.delta_px)}px`,
+                };
+        }
     }
 
     private addOverlay() {
@@ -121,16 +143,11 @@ class Collector {
     }
 
     private removeOverlay() {
-        const div = document.getElementById("uxbench-overlay");
-        if (div) div.remove();
+        document.getElementById("uxbench-overlay")?.remove();
     }
 }
 
-// Guard against double-initialization.
-// The manifest injects this script on page load. The worker also injects it
-// programmatically on startRecording() to cover tabs that pre-date the extension.
-// Without this guard, duplicate Collector instances would attach duplicate listeners.
 if (!(window as any).__uxbench_loaded) {
     (window as any).__uxbench_loaded = true;
-    new Collector();
+    new HarnessCollector();
 }

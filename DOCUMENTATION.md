@@ -16,6 +16,7 @@
 README.md (Hub)
 ├── PRODUCT.md        — Feature spec, what exists
 ├── RECORDER_GUIDE.md — How to install and use the Recorder
+├── LIBRARY_GUIDE.md  — How to embed the browser library
 ├── ARCHITECTURE.md   — System design, data flow, technical constraints
 ├── RESEARCHER.md     — Scientific basis, metric methodology
 └── DOCUMENTATION.md  — This file (meta-documentation)
@@ -30,6 +31,7 @@ README.md (Hub)
 | **README.md**         | Entry point, quick start, doc map                | Major features       |
 | **PRODUCT.md**        | Feature source of truth (prevents hallucination) | Feature launches     |
 | **RECORDER_GUIDE.md** | Extension install, recording workflow            | Recorder UX changes  |
+| **LIBRARY_GUIDE.md**  | Embedded browser library integration             | Library API changes  |
 | **ARCHITECTURE.md**   | System design, module boundaries, data flow      | Architecture changes |
 | **RESEARCHER.md**     | Scientific methodology, metric definitions       | Metric changes       |
 | **DOCUMENTATION.md**  | Meta: documentation philosophy and rules         | Rarely               |

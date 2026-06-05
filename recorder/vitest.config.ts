@@ -1,10 +1,10 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
     test: {
         globals: true,
-        environment: 'happy-dom',
-        include: ['src/**/*.test.ts'],
-        setupFiles: ['src/__mocks__/setup.ts'],
+        environment: "happy-dom",
+        include: ["src/**/*.test.ts"],
+        setupFiles: ["src/__mocks__/setup.ts"],
     },
 });

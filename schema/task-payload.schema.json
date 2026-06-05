@@ -1,0 +1,207 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://uxbench.dev/schema/task-payload/3.0",
+    "title": "UX Bench Task Payload",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "schema_version",
+        "source",
+        "app",
+        "session_id",
+        "task_id",
+        "task_run_id",
+        "status",
+        "started_at",
+        "ended_at",
+        "duration_ms",
+        "total_ms",
+        "active_ms",
+        "idle_ms",
+        "idle_gap_count",
+        "dimensions",
+        "metrics"
+    ],
+    "properties": {
+        "schema_version": {
+            "type": "string",
+            "const": "3.0"
+        },
+        "source": {
+            "type": "string",
+            "enum": ["browser-library", "chrome-extension"]
+        },
+        "app": {
+            "type": "string"
+        },
+        "session_id": {
+            "type": "string"
+        },
+        "task_id": {
+            "type": "string"
+        },
+        "task_run_id": {
+            "type": "string"
+        },
+        "status": {
+            "type": "string",
+            "enum": ["completed", "failed", "cancelled", "abandoned"]
+        },
+        "started_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "ended_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "duration_ms": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "total_ms": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "active_ms": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "idle_ms": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "idle_gap_count": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "dimensions": {
+            "type": "object",
+            "additionalProperties": {
+                "type": ["string", "number", "boolean", "null"]
+            }
+        },
+        "metrics": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["clicks", "target_effort", "scroll", "cursor", "input"],
+            "properties": {
+                "clicks": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["total", "ceremonial", "wasted"],
+                    "properties": {
+                        "total": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "ceremonial": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "wasted": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    }
+                },
+                "target_effort": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["average_id", "max_id", "max_distance_px", "max_target_width_px"],
+                    "properties": {
+                        "average_id": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "max_id": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "max_distance_px": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "max_target_width_px": {
+                            "type": "number",
+                            "minimum": 0
+                        }
+                    }
+                },
+                "scroll": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["total_px", "page_px", "container_px", "horizontal_px"],
+                    "properties": {
+                        "total_px": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "page_px": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "container_px": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "horizontal_px": {
+                            "type": "number",
+                            "minimum": 0
+                        }
+                    }
+                },
+                "cursor": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["total_px", "move_events"],
+                    "properties": {
+                        "total_px": {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        "move_events": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    }
+                },
+                "input": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "context_switches",
+                        "longest_keyboard_streak",
+                        "longest_mouse_streak",
+                        "shortcuts_used"
+                    ],
+                    "properties": {
+                        "context_switches": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "longest_keyboard_streak": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "longest_mouse_streak": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "shortcuts_used": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    }
+                }
+            }
+        },
+        "run_count": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "averaged": {
+            "type": "boolean"
+        }
+    }
+}

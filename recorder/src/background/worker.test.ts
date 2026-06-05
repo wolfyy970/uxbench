@@ -1,31 +1,19 @@
-// Tests for the background service worker (worker.ts)
-//
-// Strategy: worker.ts is a side-effect module that registers chrome listeners
-// at import time. We need to extract the worker's core functions for testing.
-// Since we can't re-import easily, we'll test the worker logic by directly
-// calling the functions through the captured chrome.runtime.onMessage listener.
-//
-// The mock setup happens in the global setup file. We rely on the fact that
-// worker.ts uses `chrome.runtime.onMessage.addListener(fn)` — the mock captures
-// the callback. We then call it directly.
-
-import { describe, it, expect, beforeAll, beforeEach, vi, afterEach } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { chrome } from "../__mocks__/chrome";
+import type { TaskPayload, TaskSnapshot } from "../core";
 
-// The listener references — will be set after worker loads
 type MessageListener = (message: any, sender: any, sendResponse: any) => void;
 type CommandListener = (command: string) => void;
+
 let onMessageListener: MessageListener;
 let onCommandListener: CommandListener;
 
-// Helper: reset storage directly
 function resetStorage() {
     for (const key of Object.keys(chrome.storage.local._storage)) {
         delete chrome.storage.local._storage[key];
     }
 }
 
-// Re-wire all storage mock implementations
 function rewireMocks() {
     chrome.storage.local.get.mockImplementation(async (keys: string | string[]) => {
         const keyList = typeof keys === "string" ? [keys] : keys;
@@ -52,18 +40,72 @@ function rewireMocks() {
 
 async function sendMessage(message: any) {
     onMessageListener(message, {}, () => {});
-    await new Promise((r) => setTimeout(r, 20));
+    await new Promise((resolve) => setTimeout(resolve, 20));
 }
 
 async function sendCommand(command: string) {
     onCommandListener(command);
-    await new Promise((r) => setTimeout(r, 20));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+}
+
+function samplePayload(): TaskPayload {
+    return {
+        schema_version: "3.0",
+        source: "chrome-extension",
+        app: "UX Bench Harness",
+        session_id: "session",
+        task_id: "harness-recording",
+        task_run_id: "run",
+        status: "completed",
+        started_at: "2026-06-05T12:00:00.000Z",
+        ended_at: "2026-06-05T12:00:05.000Z",
+        duration_ms: 5000,
+        total_ms: 5000,
+        active_ms: 5000,
+        idle_ms: 0,
+        idle_gap_count: 0,
+        dimensions: { url: "https://example.com" },
+        metrics: {
+            clicks: { total: 1, ceremonial: 0, wasted: 0 },
+            target_effort: { average_id: 0, max_id: 0, max_distance_px: 0, max_target_width_px: 0 },
+            scroll: { total_px: 0, page_px: 0, container_px: 0, horizontal_px: 0 },
+            cursor: { total_px: 0, move_events: 0 },
+            input: {
+                context_switches: 0,
+                longest_keyboard_streak: 0,
+                longest_mouse_streak: 1,
+                shortcuts_used: 0,
+            },
+        },
+    };
+}
+
+function sampleSnapshot(): TaskSnapshot {
+    return {
+        task_id: "harness-recording",
+        task_run_id: "run",
+        elapsed_ms: 1234,
+        total_ms: 1234,
+        active_ms: 1234,
+        idle_ms: 0,
+        idle_gap_count: 0,
+        metrics: {
+            clicks: { total: 2, ceremonial: 1, wasted: 0 },
+            target_effort: { average_id: 1.25, max_id: 2, max_distance_px: 100, max_target_width_px: 40 },
+            scroll: { total_px: 1500, page_px: 1000, container_px: 500, horizontal_px: 0 },
+            cursor: { total_px: 800, move_events: 4 },
+            input: {
+                context_switches: 3,
+                longest_keyboard_streak: 2,
+                longest_mouse_streak: 4,
+                shortcuts_used: 1,
+            },
+        },
+    };
 }
 
 describe("worker.ts", () => {
-    // Import worker.ts once and capture listeners in the first beforeAll
     beforeAll(async () => {
-        // Set up listener capture
         chrome.runtime.onMessage.addListener.mockImplementation((fn: MessageListener) => {
             onMessageListener = fn;
         });
@@ -71,14 +113,11 @@ describe("worker.ts", () => {
             onCommandListener = fn;
         });
         rewireMocks();
-
-        // Dynamic import to ensure our mock setup happens first
         await import("./worker.js");
     });
 
     beforeEach(() => {
         resetStorage();
-        // Clear call counts but DON'T clear implementations
         chrome.storage.local.get.mockClear();
         chrome.storage.local.set.mockClear();
         chrome.storage.local.remove.mockClear();
@@ -87,846 +126,124 @@ describe("worker.ts", () => {
         chrome.runtime.sendMessage.mockClear();
         chrome.action.setBadgeText.mockClear();
         chrome.action.setBadgeBackgroundColor.mockClear();
-        vi.useFakeTimers({ shouldAdvanceTime: true });
     });
 
     afterEach(() => {
-        vi.useRealTimers();
+        rewireMocks();
     });
 
-    describe("startRecording", () => {
-        it("should initialize a schema-compliant recording in storage", async () => {
-            await sendMessage({ type: "START_RECORDING" });
+    it("starts a recording and notifies the original tab and side panel", async () => {
+        await sendMessage({ type: "START_RECORDING" });
 
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            expect(recordingState).toBeDefined();
-            expect(recordingState.isRecording).toBe(true);
-            expect(recordingState.startTime).toBeTypeOf("number");
-            expect(recordingState.lastClickPosition).toBeNull();
-
-            const rec = recordingState.currentRecording;
-            expect(rec.schema_version).toBe("1.0");
-            expect(rec.source).toBe("chrome-extension");
-            expect(rec.metadata.timestamp).toBeTypeOf("string");
-            expect(rec.metadata.duration_ms).toBe(0);
-            expect(rec.metadata.operator).toBe("human");
-            expect(rec.metadata.url).toBe("https://example.com");
-
-            const m = rec.metrics;
-            expect(m.click_count.total).toBe(0);
-            expect(m.time_on_task).toBeDefined();
-            expect(m.fitts.formula).toBe("shannon");
-            expect(m.context_switches).toBeDefined();
-            expect(m.shortcut_coverage).toBeDefined();
-            expect(m.typing_ratio).toBeDefined();
-            expect(m.scanning_distance).toBeDefined();
-            expect(m.scroll_distance).toBeDefined();
-            expect(rec.action_log).toEqual([]);
-        });
-
-        it("should clear previous stats and benchmarkReport", async () => {
-            await chrome.storage.local.set({ stats: { clicks: 5 }, benchmarkReport: { old: true } });
-            await sendMessage({ type: "START_RECORDING" });
-
-            const { stats, benchmarkReport } = await chrome.storage.local.get(["stats", "benchmarkReport"]);
-            expect(stats).toBeNull();
-            expect(benchmarkReport).toBeNull();
-        });
-
-        it("should notify content script via tabs.sendMessage", async () => {
-            await sendMessage({ type: "START_RECORDING" });
-            expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(1, { type: "RECORDING_STARTED" });
-        });
-
-        it("should notify side panel via runtime.sendMessage", async () => {
-            await sendMessage({ type: "START_RECORDING" });
-            expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: "RECORDING_STARTED" });
-        });
-
-        it("should set badge text when chrome.action is available", async () => {
-            await sendMessage({ type: "START_RECORDING" });
-            expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: "REC" });
-            expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({ color: "#EE6019" });
-        });
+        const { recordingState, stats, benchmarkReport } = await chrome.storage.local.get([
+            "recordingState",
+            "stats",
+            "benchmarkReport",
+        ]);
+        expect(recordingState.isRecording).toBe(true);
+        expect(recordingState.recordingTabId).toBe(1);
+        expect(recordingState.startTime).toBeTypeOf("number");
+        expect(stats).toBeNull();
+        expect(benchmarkReport).toBeNull();
+        expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
+            expect.objectContaining({ target: { tabId: 1 }, files: ["content-script.js"] }),
+        );
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(1, { type: "RECORDING_STARTED" });
+        expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: "RECORDING_STARTED" });
     });
 
-    describe("stopRecording", () => {
-        it("should compute duration and generate benchmarkReport", async () => {
-            await sendMessage({ type: "START_RECORDING" });
-            vi.advanceTimersByTime(5000);
-            await sendMessage({ type: "STOP_RECORDING" });
+    it("stores live snapshots and forwards feed events", async () => {
+        await sendMessage({ type: "START_RECORDING" });
+        chrome.runtime.sendMessage.mockClear();
 
-            const { benchmarkReport, recordingState } = await chrome.storage.local.get([
-                "benchmarkReport",
-                "recordingState",
-            ]);
-            expect(recordingState.isRecording).toBe(false);
-            expect(benchmarkReport).toBeDefined();
-            expect(benchmarkReport.metadata.duration_ms).toBeGreaterThanOrEqual(4500);
-            expect(benchmarkReport.metrics.time_on_task.total_ms).toBeGreaterThanOrEqual(4500);
+        await sendMessage({
+            type: "HARNESS_SNAPSHOT",
+            snapshot: sampleSnapshot(),
+            feed: { type: "click", label: "CLICK (2)", detail: "BUTTON#save" },
         });
 
-        it("should drain content-script flush events before finalizing benchmarkReport", async () => {
-            await sendMessage({ type: "START_RECORDING" });
-
-            chrome.tabs.sendMessage.mockImplementation(async (_tabId: number, msg: any) => {
-                if (msg?.type === "FLUSH_AND_STOP_RECORDING") {
-                    onMessageListener(
-                        {
-                            type: "EVENT_CAPTURED",
-                            payload: {
-                                type: "keyboard_update",
-                                final: true,
-                                context_switches: {
-                                    total: 2,
-                                    ratio: 0.5,
-                                    longest_keyboard_streak: 3,
-                                    longest_mouse_streak: 1,
-                                },
-                                shortcut_coverage: { shortcuts_used: 4 },
-                                typing_ratio: {
-                                    free_text_inputs: 1,
-                                    constrained_inputs: 1,
-                                    ratio: 0.5,
-                                    free_text_fields: ["Name"],
-                                },
-                            },
-                        },
-                        {},
-                        () => {},
-                    );
-                }
-            });
-
-            await sendMessage({ type: "STOP_RECORDING" });
-
-            const { benchmarkReport } = await chrome.storage.local.get("benchmarkReport");
-            expect(benchmarkReport.metrics.shortcut_coverage.shortcuts_used).toBe(4);
-            expect(benchmarkReport.metrics.context_switches.total).toBe(2);
-            expect(benchmarkReport.metrics.typing_ratio.free_text_fields).toEqual(["Name"]);
-
-            rewireMocks();
+        const { stats } = await chrome.storage.local.get("stats");
+        expect(stats).toMatchObject({
+            clicks: 2,
+            scroll: 1500,
+            switches: 3,
+            fitts: 1.25,
+            shortcuts: 1,
+            travel: 800,
+            gaps: 0,
         });
-
-        it("should not create an idle gap from a final keyboard flush summary", async () => {
-            await sendMessage({ type: "START_RECORDING" });
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
+        expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: "FEED_EVENT",
+                event: expect.objectContaining({
                     type: "click",
-                    timestamp: Date.now(),
-                    x: 10,
-                    y: 10,
-                    target: { tagName: "BUTTON", id: "", innerText: "First", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            vi.advanceTimersByTime(5000);
-            chrome.tabs.sendMessage.mockImplementation(async (_tabId: number, msg: any) => {
-                if (msg?.type === "FLUSH_AND_STOP_RECORDING") {
-                    onMessageListener(
-                        {
-                            type: "EVENT_CAPTURED",
-                            payload: {
-                                type: "keyboard_update",
-                                final: true,
-                                context_switches: {
-                                    total: 0,
-                                    ratio: 0,
-                                    longest_keyboard_streak: 0,
-                                    longest_mouse_streak: 1,
-                                },
-                                shortcut_coverage: { shortcuts_used: 0 },
-                                typing_ratio: {
-                                    free_text_inputs: 0,
-                                    constrained_inputs: 0,
-                                    ratio: 0,
-                                    free_text_fields: [],
-                                },
-                            },
-                        },
-                        {},
-                        () => {},
-                    );
-                }
-            });
-
-            await sendMessage({ type: "STOP_RECORDING" });
-
-            const { benchmarkReport } = await chrome.storage.local.get("benchmarkReport");
-            expect(benchmarkReport.metrics.time_on_task.idle_gaps).toHaveLength(0);
-
-            rewireMocks();
-        });
-
-        it("should stop the original recording tab even if another tab is active later", async () => {
-            chrome.tabs.query.mockImplementationOnce(async () => [{ id: 10, url: "https://start.example" }]);
-            await sendMessage({ type: "START_RECORDING" });
-
-            chrome.tabs.sendMessage.mockClear();
-            chrome.tabs.query.mockImplementation(async () => [{ id: 99, url: "https://other.example" }]);
-            await sendMessage({ type: "STOP_RECORDING" });
-
-            expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(10, { type: "FLUSH_AND_STOP_RECORDING" });
-            expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(10, { type: "RECORDING_STOPPED" });
-
-            rewireMocks();
-        });
-
-        it("should write storage BEFORE sending notification messages", async () => {
-            const callOrder: string[] = [];
-
-            chrome.storage.local.set.mockImplementation(async (items: Record<string, any>) => {
-                Object.assign(chrome.storage.local._storage, items);
-                if (items.benchmarkReport !== undefined) callOrder.push("storage.set:report");
-            });
-            chrome.runtime.sendMessage.mockImplementation(async (msg: any) => {
-                if (msg?.type === "RECORDING_STOPPED") callOrder.push("runtime.sendMessage:stopped");
-            });
-
-            await sendMessage({ type: "START_RECORDING" });
-            callOrder.length = 0;
-            await sendMessage({ type: "STOP_RECORDING" });
-
-            const setIdx = callOrder.indexOf("storage.set:report");
-            const msgIdx = callOrder.indexOf("runtime.sendMessage:stopped");
-            expect(setIdx).toBeGreaterThanOrEqual(0);
-            expect(msgIdx).toBeGreaterThan(setIdx);
-
-            // Restore original implementations
-            rewireMocks();
-        });
-
-        it("should do nothing if not recording", async () => {
-            await sendMessage({ type: "STOP_RECORDING" });
-            const { benchmarkReport } = await chrome.storage.local.get("benchmarkReport");
-            expect(benchmarkReport).toBeUndefined();
-        });
-
-        it("should clear stats from storage", async () => {
-            await sendMessage({ type: "START_RECORDING" });
-            await chrome.storage.local.set({ stats: { clicks: 3 } });
-            await sendMessage({ type: "STOP_RECORDING" });
-
-            const { stats } = await chrome.storage.local.get("stats");
-            expect(stats).toBeNull();
-        });
-
-        it("should notify both content script and side panel", async () => {
-            await sendMessage({ type: "START_RECORDING" });
-            chrome.tabs.sendMessage.mockClear();
-            chrome.runtime.sendMessage.mockClear();
-            await sendMessage({ type: "STOP_RECORDING" });
-
-            expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(1, { type: "RECORDING_STOPPED" });
-            expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: "RECORDING_STOPPED" });
-        });
-    });
-
-    describe("handleEvent — click", () => {
-        beforeEach(async () => {
-            await sendMessage({ type: "START_RECORDING" });
-        });
-
-        it("should increment click_count.total", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 100,
-                    y: 200,
-                    target: { tagName: "BUTTON", id: "btn1", innerText: "Save", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            expect(recordingState.currentRecording.metrics.click_count.total).toBe(1);
-        });
-
-        it("should compute Fitts ID and scanning distance between consecutive clicks", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 100,
-                    y: 100,
-                    target: { tagName: "BUTTON", id: "", innerText: "A", rect: { width: 80, height: 32 } },
-                },
-            });
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 500,
-                    y: 100,
-                    target: { tagName: "BUTTON", id: "", innerText: "B", rect: { width: 40, height: 20 } },
-                },
-            });
-
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            const m = recordingState.currentRecording.metrics;
-
-            expect(m.click_count.total).toBe(2);
-            expect(m.scanning_distance.cumulative_px).toBe(400);
-            expect(m.scanning_distance.average_px).toBe(400);
-
-            // Welford directional target width: movement is purely horizontal (dx=400, dy=0)
-            // angle = atan2(0, 400) = 0, so effective width = 40*cos(0) + 20*sin(0) = 40
-            const expectedID = Math.log2(400 / 40 + 1);
-            expect(m.fitts.cumulative_id).toBeCloseTo(expectedID, 2);
-            expect(m.fitts.average_id).toBeCloseTo(expectedID, 2);
-            expect(m.fitts.max_id).toBeCloseTo(expectedID, 2);
-        });
-
-        it("should track max Fitts ID element", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 0,
-                    y: 0,
-                    target: { tagName: "DIV", id: "", innerText: "Start", rect: { width: 100, height: 50 } },
-                },
-            });
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 1000,
-                    y: 500,
-                    target: { tagName: "BUTTON", id: "tiny", innerText: "Submit", rect: { width: 10, height: 10 } },
-                },
-            });
-
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            expect(recordingState.currentRecording.metrics.fitts.max_id_element).toBe("Submit");
-            expect(recordingState.currentRecording.metrics.fitts.max_id_target_size).toBe("10x10px");
-        });
-
-        it("should append to action_log", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: 12345,
-                    x: 50,
-                    y: 50,
-                    target: { tagName: "A", id: "link1", innerText: "Home", rect: { width: 60, height: 20 } },
-                },
-            });
-
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            const log = recordingState.currentRecording.action_log;
-            expect(log).toHaveLength(1);
-            expect(log[0].target).toBe("A#link1");
-            expect(log[0].text).toBe("Home");
-        });
-
-        it("should write live stats to storage with all metrics", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 10,
-                    y: 10,
-                    target: { tagName: "DIV", id: "", innerText: "", rect: { width: 100, height: 50 } },
-                },
-            });
-
-            const { stats } = await chrome.storage.local.get("stats");
-            expect(stats).toBeDefined();
-            expect(stats.clicks).toBe(1);
-            // Expanded stats should include all metric fields
-            expect(stats).toHaveProperty("scroll");
-            expect(stats).toHaveProperty("switches");
-            expect(stats).toHaveProperty("fitts");
-            expect(stats).toHaveProperty("shortcuts");
-            expect(stats).toHaveProperty("typing");
-            expect(stats).toHaveProperty("scanAvg");
-            expect(stats).toHaveProperty("gaps");
-        });
-
-        it("should broadcast FEED_EVENT after click event", async () => {
-            chrome.runtime.sendMessage.mockClear();
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 10,
-                    y: 10,
-                    classification: "productive",
-                    target: { tagName: "BUTTON", id: "save", innerText: "Save", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
-                (call: any[]) => call[0]?.type === "FEED_EVENT",
-            );
-            expect(feedCalls.length).toBeGreaterThanOrEqual(1);
-            const feedEvent = feedCalls[feedCalls.length - 1][0].event;
-            expect(feedEvent.type).toBe("click");
-            expect(feedEvent.label).toContain("CLICK");
-            expect(feedEvent.label).toContain("BUTTON");
-            expect(feedEvent.metricUpdates).toBeDefined();
-            expect(feedEvent.metricUpdates.clicks).toBeDefined();
-        });
-
-        it("should include detail for wasted clicks in FEED_EVENT", async () => {
-            chrome.runtime.sendMessage.mockClear();
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 10,
-                    y: 10,
-                    classification: "wasted",
-                    classificationReason: "disabled element",
-                    target: { tagName: "BUTTON", id: "", innerText: "Submit", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
-                (call: any[]) => call[0]?.type === "FEED_EVENT",
-            );
-            expect(feedCalls.length).toBeGreaterThanOrEqual(1);
-            const feedEvent = feedCalls[feedCalls.length - 1][0].event;
-            expect(feedEvent.detail).toContain("wasted");
-        });
-
-        it("should not compute Fitts ID for first click", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 100,
-                    y: 100,
-                    target: { tagName: "BUTTON", id: "", innerText: "First", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            expect(recordingState.currentRecording.metrics.fitts.cumulative_id).toBe(0);
-            expect(recordingState.currentRecording.metrics.scanning_distance.cumulative_px).toBe(0);
-        });
-    });
-
-    describe("handleEvent — scroll_update", () => {
-        beforeEach(async () => {
-            await sendMessage({ type: "START_RECORDING" });
-        });
-
-        it("should update scroll_distance metrics", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "scroll_update",
-                    total_px: 1500,
-                    page_scroll_px: 1200,
-                    container_scroll_px: 300,
-                    scroll_events: 12,
-                    heaviest_container: "sidebar",
-                },
-            });
-
-            const { recordingState, stats } = await chrome.storage.local.get(["recordingState", "stats"]);
-            const sd = recordingState.currentRecording.metrics.scroll_distance;
-            expect(sd.total_px).toBe(1500);
-            expect(sd.page_scroll_px).toBe(1200);
-            expect(sd.heaviest_container).toBe("sidebar");
-            expect(stats.scroll).toBe(1500);
-        });
-    });
-
-    describe("handleEvent — scroll FEED_EVENT throttling", () => {
-        beforeEach(async () => {
-            await sendMessage({ type: "START_RECORDING" });
-        });
-
-        it("should broadcast FEED_EVENT for scroll updates", async () => {
-            chrome.runtime.sendMessage.mockClear();
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "scroll_update",
-                    total_px: 500,
-                    page_scroll_px: 500,
-                    container_scroll_px: 0,
-                    scroll_events: 5,
-                },
-            });
-
-            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
-                (call: any[]) => call[0]?.type === "FEED_EVENT",
-            );
-            expect(feedCalls.length).toBeGreaterThanOrEqual(1);
-            const feedEvent = feedCalls[0][0].event;
-            expect(feedEvent.type).toBe("scroll");
-            expect(feedEvent.label).toContain("SCROLL");
-        });
-    });
-
-    describe("handleEvent — keyboard_update", () => {
-        beforeEach(async () => {
-            await sendMessage({ type: "START_RECORDING" });
-        });
-
-        it("should update context_switches, shortcut_coverage, and typing_ratio", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "keyboard_update",
-                    context_switches: { total: 4, ratio: 0.2, longest_keyboard_streak: 10, longest_mouse_streak: 5 },
-                    shortcut_coverage: { shortcuts_used: 3 },
-                    typing_ratio: {
-                        free_text_inputs: 2,
-                        constrained_inputs: 1,
-                        ratio: 0.67,
-                        free_text_fields: ["Name", "Email"],
-                    },
-                },
-            });
-
-            const { recordingState, stats } = await chrome.storage.local.get(["recordingState", "stats"]);
-            const m = recordingState.currentRecording.metrics;
-            expect(m.context_switches.total).toBe(4);
-            expect(m.shortcut_coverage.shortcuts_used).toBe(3);
-            expect(m.typing_ratio.free_text_fields).toEqual(["Name", "Email"]);
-            expect(stats.switches).toBe(4);
-        });
-    });
-
-    describe("handleEvent — click classification", () => {
-        beforeEach(async () => {
-            await sendMessage({ type: "START_RECORDING" });
-        });
-
-        it("should count productive clicks", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 10,
-                    y: 10,
-                    classification: "productive",
-                    target: { tagName: "BUTTON", id: "ok", innerText: "OK", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            const cc = recordingState.currentRecording.metrics.click_count;
-            expect(cc.total).toBe(1);
-            expect(cc.productive).toBe(1);
-            expect(cc.wasted).toBe(0);
-            expect(cc.ceremonial).toBe(0);
-        });
-
-        it("should count wasted clicks and record details", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 10,
-                    y: 10,
-                    classification: "wasted",
-                    classificationReason: "disabled element",
-                    target: { tagName: "BUTTON", id: "submit", innerText: "Submit", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            const cc = recordingState.currentRecording.metrics.click_count;
-            expect(cc.wasted).toBe(1);
-            expect(cc.wasted_details).toHaveLength(1);
-            expect(cc.wasted_details[0].element).toBe("BUTTON#submit");
-            expect(cc.wasted_details[0].reason).toBe("disabled element");
-        });
-
-        it("should count ceremonial clicks and record details", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 10,
-                    y: 10,
-                    classification: "ceremonial",
-                    classificationReason: "consent/cookie banner",
-                    target: { tagName: "BUTTON", id: "", innerText: "Accept", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            const cc = recordingState.currentRecording.metrics.click_count;
-            expect(cc.ceremonial).toBe(1);
-            expect(cc.ceremonial_details).toHaveLength(1);
-            expect(cc.ceremonial_details[0].reason).toBe("consent/cookie banner");
-        });
-    });
-
-    describe("handleEvent — idle gap detection", () => {
-        beforeEach(async () => {
-            await sendMessage({ type: "START_RECORDING" });
-        });
-
-        it("should detect idle gap when >3s passes between user actions", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 10,
-                    y: 10,
-                    target: { tagName: "BUTTON", id: "", innerText: "First", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            // Advance time beyond the 3s idle threshold
-            vi.advanceTimersByTime(5000);
-
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 20,
-                    y: 20,
-                    target: { tagName: "BUTTON", id: "", innerText: "Second", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            const gaps = recordingState.currentRecording.metrics.time_on_task.idle_gaps;
-            expect(gaps.length).toBeGreaterThanOrEqual(1);
-            expect(gaps[0].gap_ms).toBeGreaterThanOrEqual(4500);
-        });
-
-        it("should NOT detect idle gap for passive sensor events (mouse_travel)", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 10,
-                    y: 10,
-                    target: { tagName: "BUTTON", id: "", innerText: "A", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            // Advance time beyond idle threshold
-            vi.advanceTimersByTime(5000);
-
-            // Send passive sensor event — should NOT create idle gaps
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "mouse_travel_update",
-                    total_px: 500,
-                    idle_travel_px: 200,
-                    move_events: 50,
-                    path_efficiency: null,
-                },
-            });
-
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            const gaps = recordingState.currentRecording.metrics.time_on_task.idle_gaps;
-            expect(gaps).toHaveLength(0);
-        });
-    });
-
-    describe("stopRecording — idle/active time derivation", () => {
-        it("should compute idle_ms and active_ms from idle gaps", async () => {
-            await sendMessage({ type: "START_RECORDING" });
-
-            // Simulate a click, wait >3s, then another click to create an idle gap
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 10,
-                    y: 10,
-                    target: { tagName: "BUTTON", id: "", innerText: "A", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            vi.advanceTimersByTime(5000);
-
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 20,
-                    y: 20,
-                    target: { tagName: "BUTTON", id: "", innerText: "B", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            vi.advanceTimersByTime(1000);
-            await sendMessage({ type: "STOP_RECORDING" });
-
-            const { benchmarkReport } = await chrome.storage.local.get("benchmarkReport");
-            expect(benchmarkReport).toBeDefined();
-            const tot = benchmarkReport.metrics.time_on_task;
-            expect(tot.idle_ms).toBeGreaterThan(0);
-            expect(tot.active_ms).toBeDefined();
-            expect(tot.active_ms).toBeLessThan(tot.total_ms);
-            expect(tot.longest_idle_ms).toBeGreaterThan(0);
-            expect(tot.longest_idle_after).toBeDefined();
-        });
-    });
-
-    describe("handleEvent — mouse_travel_update", () => {
-        beforeEach(async () => {
-            await sendMessage({ type: "START_RECORDING" });
-        });
-
-        it("should update mouse_travel metrics in recording", async () => {
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "mouse_travel_update",
-                    total_px: 1200,
-                    idle_travel_px: 300,
-                    move_events: 80,
-                    path_efficiency: null,
-                },
-            });
-
-            const { recordingState, stats } = await chrome.storage.local.get(["recordingState", "stats"]);
-            const mt = recordingState.currentRecording.metrics.mouse_travel;
-            expect(mt.total_px).toBe(1200);
-            expect(mt.idle_travel_px).toBe(300);
-            expect(mt.move_events).toBe(80);
-            expect(stats.travel).toBe(1200);
-        });
-
-        it("should compute path_efficiency when scanning distance exists", async () => {
-            // First create some scanning distance via two clicks
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 100,
-                    y: 100,
-                    target: { tagName: "BUTTON", id: "", innerText: "A", rect: { width: 80, height: 32 } },
-                },
-            });
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 500,
-                    y: 100,
-                    target: { tagName: "BUTTON", id: "", innerText: "B", rect: { width: 80, height: 32 } },
-                },
-            });
-
-            // Now send mouse travel — path_efficiency = scanning / total_travel
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "mouse_travel_update",
-                    total_px: 800,
-                    idle_travel_px: 100,
-                    move_events: 50,
-                    path_efficiency: null,
-                },
-            });
-
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            const mt = recordingState.currentRecording.metrics.mouse_travel;
-            // scanning_distance.cumulative_px = 400 (distance between two clicks)
-            // path_efficiency = 400 / 800 = 0.5
-            expect(mt.path_efficiency).toBeCloseTo(0.5, 2);
-        });
-
-        it("should broadcast FEED_EVENT for mouse travel", async () => {
-            chrome.runtime.sendMessage.mockClear();
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "mouse_travel_update",
-                    total_px: 500,
-                    idle_travel_px: 100,
-                    move_events: 30,
-                    path_efficiency: null,
-                },
-            });
-
-            const feedCalls = chrome.runtime.sendMessage.mock.calls.filter(
-                (call: any[]) => call[0]?.type === "FEED_EVENT",
-            );
-            expect(feedCalls.length).toBeGreaterThanOrEqual(1);
-            const feedEvent = feedCalls[feedCalls.length - 1][0].event;
-            expect(feedEvent.type).toBe("mouse_travel");
-            expect(feedEvent.label).toContain("TRAVEL");
-        });
-    });
-
-    describe("startRecording — programmatic injection", () => {
-        it("should inject content script via chrome.scripting.executeScript", async () => {
-            chrome.scripting.executeScript.mockClear();
-            await sendMessage({ type: "START_RECORDING" });
-
-            expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    target: { tabId: 1 },
-                    files: ["content-script.js"],
+                    label: "CLICK (2)",
+                    metricUpdates: expect.objectContaining({ clicks: { value: "2" } }),
                 }),
-            );
-        });
+            }),
+        );
     });
 
-    describe("handleEvent — ignored when not recording", () => {
-        it("should not process events when not recording", async () => {
-            await chrome.storage.local.set({ recordingState: { isRecording: false } });
+    it("stops the original recording tab and stores the completed task payload", async () => {
+        chrome.tabs.query.mockImplementationOnce(async () => [{ id: 10, url: "https://start.example" }]);
+        await sendMessage({ type: "START_RECORDING" });
 
-            await sendMessage({
-                type: "EVENT_CAPTURED",
-                payload: {
-                    type: "click",
-                    timestamp: Date.now(),
-                    x: 10,
-                    y: 10,
-                    target: { tagName: "BUTTON", id: "", innerText: "X", rect: { width: 50, height: 30 } },
-                },
-            });
-
-            const { stats } = await chrome.storage.local.get("stats");
-            expect(stats).toBeUndefined();
+        chrome.tabs.sendMessage.mockClear();
+        chrome.tabs.query.mockImplementation(async () => [{ id: 99, url: "https://other.example" }]);
+        chrome.tabs.sendMessage.mockImplementation(async (_tabId: number, message: any) => {
+            if (message.type === "FLUSH_AND_STOP_RECORDING") return { ok: true, payload: samplePayload() };
+            return undefined;
         });
+
+        await sendMessage({ type: "STOP_RECORDING" });
+
+        const { recordingState, benchmarkReport, stats } = await chrome.storage.local.get([
+            "recordingState",
+            "benchmarkReport",
+            "stats",
+        ]);
+        expect(recordingState.isRecording).toBe(false);
+        expect(benchmarkReport.schema_version).toBe("3.0");
+        expect(stats).toBeNull();
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(10, { type: "FLUSH_AND_STOP_RECORDING" });
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(10, { type: "RECORDING_STOPPED" });
     });
 
-    describe("keyboard shortcut — toggle-recording", () => {
-        it("should start recording via command", async () => {
-            await chrome.storage.local.set({ recordingState: { isRecording: false } });
-            await sendCommand("toggle-recording");
+    it("writes the report before sending the stopped notification", async () => {
+        const callOrder: string[] = [];
 
-            const { recordingState } = await chrome.storage.local.get("recordingState");
-            expect(recordingState.isRecording).toBe(true);
+        chrome.storage.local.set.mockImplementation(async (items: Record<string, any>) => {
+            Object.assign(chrome.storage.local._storage, items);
+            if (items.benchmarkReport !== undefined) callOrder.push("storage.set:report");
+        });
+        chrome.runtime.sendMessage.mockImplementation(async (message: any) => {
+            if (message.type === "RECORDING_STOPPED") callOrder.push("runtime.sendMessage:stopped");
+        });
+        chrome.tabs.sendMessage.mockImplementation(async (_tabId: number, message: any) => {
+            if (message.type === "FLUSH_AND_STOP_RECORDING") return { ok: true, payload: samplePayload() };
+            return undefined;
         });
 
-        it("should stop recording via command when already recording", async () => {
-            await sendMessage({ type: "START_RECORDING" });
-            await new Promise((r) => setTimeout(r, 30));
-            await sendCommand("toggle-recording");
+        await sendMessage({ type: "START_RECORDING" });
+        callOrder.length = 0;
+        await sendMessage({ type: "STOP_RECORDING" });
 
-            const { benchmarkReport } = await chrome.storage.local.get("benchmarkReport");
-            expect(benchmarkReport).toBeDefined();
+        expect(callOrder.indexOf("storage.set:report")).toBeGreaterThanOrEqual(0);
+        expect(callOrder.indexOf("runtime.sendMessage:stopped")).toBeGreaterThan(
+            callOrder.indexOf("storage.set:report"),
+        );
+    });
+
+    it("toggles recording from the keyboard command", async () => {
+        await chrome.storage.local.set({ recordingState: { isRecording: false } });
+        await sendCommand("toggle-recording");
+        expect((await chrome.storage.local.get("recordingState")).recordingState.isRecording).toBe(true);
+
+        chrome.tabs.sendMessage.mockImplementation(async (_tabId: number, message: any) => {
+            if (message.type === "FLUSH_AND_STOP_RECORDING") return { ok: true, payload: samplePayload() };
+            return undefined;
         });
+        await sendCommand("toggle-recording");
+        expect((await chrome.storage.local.get("recordingState")).recordingState.isRecording).toBe(false);
     });
 });

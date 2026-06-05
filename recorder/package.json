@@ -1,7 +1,7 @@
 {
     "name": "uxbench-recorder",
     "version": "1.0.0",
-    "description": "UX Bench Recorder Extension",
+    "description": "UX Bench browser harness and embedded analytics library",
     "scripts": {
         "build": "node build.js",
         "watch": "node build.js --watch",

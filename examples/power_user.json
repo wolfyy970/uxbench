@@ -1,89 +1,49 @@
 {
-    "schema_version": "1.0",
-    "source": "chrome-extension",
-    "metadata": {
-        "recording_name": "CRM Power Mode",
-        "product": "CRM Power Mode",
-        "task": "Create New Customer",
-        "url": "https://modern-crm.example.com/customers/new?mode=power",
-        "urls_visited": ["https://modern-crm.example.com/customers/new?mode=power"],
-        "timestamp": "2026-02-24T09:00:00Z",
-        "duration_ms": 12000,
-        "browser": "Chrome",
-        "source_version": "1.0.0",
-        "operator": "human",
-        "navigation_count": 1,
-        "navigation_gap_ms": 0
+    "schema_version": "3.0",
+    "source": "browser-library",
+    "app": "acme-crm",
+    "session_id": "session-power-user-001",
+    "task_id": "create-customer",
+    "task_run_id": "create-customer-power-user-001",
+    "status": "completed",
+    "started_at": "2026-06-05T12:20:00.000Z",
+    "ended_at": "2026-06-05T12:20:13.000Z",
+    "duration_ms": 13000,
+    "total_ms": 13000,
+    "active_ms": 13000,
+    "idle_ms": 0,
+    "idle_gap_count": 0,
+    "dimensions": {
+        "variant": "keyboard-heavy",
+        "route": "/customers/new"
     },
     "metrics": {
-        "click_count": {
+        "clicks": {
             "total": 2,
-            "productive": 2,
             "ceremonial": 0,
-            "wasted": 0,
-            "ceremonial_details": [],
-            "wasted_details": []
+            "wasted": 0
         },
-        "time_on_task": {
-            "total_ms": 12000,
-            "active_ms": 12000,
-            "idle_ms": 0,
-            "idle_gaps": []
-        },
-        "fitts": {
-            "formula": "shannon",
-            "cumulative_id": 1.2,
+        "target_effort": {
             "average_id": 0.5,
             "max_id": 0.8,
-            "max_id_element": "Command palette result",
-            "max_id_distance_px": 120,
-            "max_id_target_size": "240x40px",
-            "top_3_hardest": [
-                {
-                    "element": "Command palette result",
-                    "id": 0.8,
-                    "distance_px": 120,
-                    "target_size": "240x40px"
-                }
-            ]
+            "max_distance_px": 120,
+            "max_target_width_px": 96
         },
-        "context_switches": {
-            "total": 0,
-            "ratio": 0,
-            "longest_keyboard_streak": 18,
-            "longest_mouse_streak": 0
-        },
-        "shortcut_coverage": {
-            "shortcuts_used": 15
-        },
-        "typing_ratio": {
-            "free_text_inputs": 2,
-            "constrained_inputs": 4,
-            "ratio": 0.33,
-            "free_text_fields": ["Command palette", "Name"]
-        },
-        "scanning_distance": {
-            "method": "euclidean",
-            "cumulative_px": 900,
-            "average_px": 300,
-            "max_single_px": 480,
-            "max_single_from": "Command palette",
-            "max_single_to": "Result"
-        },
-        "scroll_distance": {
+        "scroll": {
             "total_px": 0,
-            "page_scroll_px": 0,
-            "container_scroll_px": 0,
-            "total_horizontal_px": 0,
-            "scroll_events": 0,
-            "heaviest_container": null
+            "page_px": 0,
+            "container_px": 0,
+            "horizontal_px": 0
         },
-        "mouse_travel": {
-            "total_px": 1400,
-            "idle_travel_px": 100,
-            "move_events": 30,
-            "path_efficiency": 0.643
+        "cursor": {
+            "total_px": 1900,
+            "move_events": 48
+        },
+        "input": {
+            "context_switches": 1,
+            "longest_keyboard_streak": 22,
+            "longest_mouse_streak": 2,
+            "shortcuts_used": 8
         }
-    },
-    "action_log": []
+    }
 }

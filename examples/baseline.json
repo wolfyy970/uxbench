@@ -1,107 +1,49 @@
 {
-    "schema_version": "1.0",
-    "source": "chrome-extension",
-    "metadata": {
-        "recording_name": "Legacy CRM Baseline",
-        "product": "Legacy CRM",
-        "task": "Create New Customer",
-        "url": "https://legacy-crm.example.com/customers/new",
-        "urls_visited": ["https://legacy-crm.example.com/customers/new"],
-        "timestamp": "2026-02-23T10:00:00Z",
-        "duration_ms": 45000,
-        "browser": "Chrome",
-        "source_version": "1.0.0",
-        "operator": "human",
-        "navigation_count": 1,
-        "navigation_gap_ms": 0
+    "schema_version": "3.0",
+    "source": "browser-library",
+    "app": "acme-crm",
+    "session_id": "session-baseline-001",
+    "task_id": "create-customer",
+    "task_run_id": "create-customer-baseline-001",
+    "status": "completed",
+    "started_at": "2026-06-05T12:00:00.000Z",
+    "ended_at": "2026-06-05T12:00:46.000Z",
+    "duration_ms": 46000,
+    "total_ms": 46000,
+    "active_ms": 39000,
+    "idle_ms": 7000,
+    "idle_gap_count": 2,
+    "dimensions": {
+        "variant": "baseline",
+        "route": "/customers/new"
     },
     "metrics": {
-        "click_count": {
+        "clicks": {
             "total": 12,
-            "productive": 10,
             "ceremonial": 1,
-            "wasted": 1,
-            "ceremonial_details": [
-                {
-                    "element": "BUTTON#cookie-accept",
-                    "reason": "consent/cookie banner"
-                }
-            ],
-            "wasted_details": [
-                {
-                    "element": "BUTTON#submit",
-                    "reason": "disabled element"
-                }
-            ]
+            "wasted": 1
         },
-        "time_on_task": {
-            "total_ms": 45000,
-            "active_ms": 39000,
-            "idle_ms": 6000,
-            "longest_idle_ms": 4200,
-            "longest_idle_after": "Address",
-            "idle_gaps": [
-                {
-                    "gap_ms": 4200,
-                    "after_action": "Address",
-                    "before_action": "Save"
-                }
-            ]
-        },
-        "fitts": {
-            "formula": "shannon",
-            "cumulative_id": 42.5,
+        "target_effort": {
             "average_id": 4.2,
-            "max_id": 5.8,
-            "max_id_element": "Save",
-            "max_id_distance_px": 780,
-            "max_id_target_size": "84x32px",
-            "top_3_hardest": [
-                {
-                    "element": "Save",
-                    "id": 5.8,
-                    "distance_px": 780,
-                    "target_size": "84x32px"
-                }
-            ]
+            "max_id": 6.1,
+            "max_distance_px": 860,
+            "max_target_width_px": 28
         },
-        "context_switches": {
-            "total": 8,
-            "ratio": 0.25,
-            "longest_keyboard_streak": 6,
-            "longest_mouse_streak": 3
-        },
-        "shortcut_coverage": {
-            "shortcuts_used": 0
-        },
-        "typing_ratio": {
-            "free_text_inputs": 4,
-            "constrained_inputs": 2,
-            "ratio": 0.67,
-            "free_text_fields": ["Name", "Email", "Address", "Notes"]
-        },
-        "scanning_distance": {
-            "method": "euclidean",
-            "cumulative_px": 12500,
-            "average_px": 1250,
-            "max_single_px": 2100,
-            "max_single_from": "Address",
-            "max_single_to": "Save"
-        },
-        "scroll_distance": {
+        "scroll": {
             "total_px": 2600,
-            "page_scroll_px": 2100,
-            "container_scroll_px": 500,
-            "total_horizontal_px": 0,
-            "scroll_events": 18,
-            "heaviest_container": "customer-form"
+            "page_px": 2100,
+            "container_px": 500,
+            "horizontal_px": 0
         },
-        "mouse_travel": {
+        "cursor": {
             "total_px": 16800,
-            "idle_travel_px": 4200,
-            "move_events": 340,
-            "path_efficiency": 0.744
+            "move_events": 420
+        },
+        "input": {
+            "context_switches": 9,
+            "longest_keyboard_streak": 5,
+            "longest_mouse_streak": 4,
+            "shortcuts_used": 0
         }
-    },
-    "action_log": []
+    }
 }

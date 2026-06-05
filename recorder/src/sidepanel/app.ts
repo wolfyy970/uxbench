@@ -14,13 +14,12 @@ interface FeedEvent {
 
 /** Live stats snapshot stored by the worker for recovery */
 interface LiveStats {
+    taskTime: string;
     clicks: number;
     scroll: number;
     switches: number;
     fitts: number;
     shortcuts: number;
-    typing: number;
-    scanAvg: number;
     travel: number;
     gaps: number;
 }
@@ -36,18 +35,16 @@ const statusText = document.getElementById("statusText") as HTMLSpanElement;
 const btnRow = document.querySelector(".btn-row") as HTMLDivElement;
 const feedEl = document.getElementById("feed") as HTMLDivElement;
 
-// Metric display elements (all 9 metrics)
+// Metric display elements
 const metricEls: Record<string, HTMLSpanElement | null> = {
     taskTime: document.getElementById("mTaskTime"),
     gaps: document.getElementById("mGaps"),
     clicks: document.getElementById("mClicks"),
     fitts: document.getElementById("mFitts"),
     travel: document.getElementById("mTravel"),
-    scanAvg: document.getElementById("mScan"),
     scroll: document.getElementById("mScroll"),
     switches: document.getElementById("mSwitches"),
     shortcuts: document.getElementById("mShortcuts"),
-    typing: document.getElementById("mTyping"),
 };
 
 // Base CSS class for all metric value elements (preserves t-mono utility)
@@ -423,7 +420,7 @@ function populateMetricsFromStats(stats: LiveStats) {
         const raw = stats[elKey as keyof LiveStats];
         if (el && raw !== undefined && raw !== null) {
             const fmt = RECOVERY_FORMAT[elKey];
-            el.textContent = fmt ? fmt(raw as number) : raw.toString();
+            el.textContent = typeof raw === "number" && fmt ? fmt(raw) : raw.toString();
         }
     }
 }
@@ -450,7 +447,7 @@ downloadBtn.addEventListener("click", async () => {
     }
 
     const ts = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
-    const count = (report.metadata as any).run_count || 1;
+    const count = report.run_count || 1;
     const format = formatSelect.value;
 
     if (format === "markdown") {

@@ -26,3 +26,9 @@ recorder/UXBench.zip
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Standard rules added for health
+.env
+.env.local
+build/
+*.log
